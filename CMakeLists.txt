@@ -10,6 +10,8 @@ find_package(ament_cmake REQUIRED)
 # uncomment the following section in order to fill in
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(sensor_msgs REQUIRED)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
@@ -22,5 +24,13 @@ if(BUILD_TESTING)
   set(ament_cmake_cpplint_FOUND TRUE)
   ament_lint_auto_find_test_dependencies()
 endif()
+
+add_executable(zed_bridge src/zed_bridge.cpp)
+ament_target_dependencies(zed_bridge rclcpp sensor_msgs)
+
+install(TARGETS
+  zed_bridge
+  DESTINATION lib/${PROJECT_NAME}
+)
 
 ament_package()
