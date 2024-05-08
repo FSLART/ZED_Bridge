@@ -6,6 +6,7 @@ ROS bridge for the ZED 2i camera, since the official shitty one doesn't work.
 ### Requirements
 - ROS Humble
 - ZED SDK
+- 
 
 ### Instructions
 
@@ -16,4 +17,3 @@ ROS bridge for the ZED 2i camera, since the official shitty one doesn't work.
 #### Bare metal
 - Install ROS Humble, if not al
 - Install ZED SDK
-- 
