@@ -1,12 +1,18 @@
 FROM fslart/cuda-ros:humble
 
+# Update the system
+RUN apt-get update && apt-get upgrade -y
+
 # Install ZED SDK
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get install -y --no-install-recommends \
     wget \
     unzip
 RUN wget https://download.stereolabs.com/zedsdk/4.1/cu121/ubuntu22 -O zed_sdk_v4.1.0.run
 RUN chmod +x zed_sdk_v4.1.0.run
 RUN ./zed_sdk_v4.1.0.run --silent
+
+# Install the dependencies
+RUN apt-get install -y ros-humble-sensor-msgs
 
 # Create the workspace
 RUN mkdir -p /catkin_ws/src
