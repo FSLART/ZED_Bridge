@@ -6,7 +6,7 @@ ROS bridge for the ZED 2i camera, since the official shitty one doesn't work.
 ### Requirements
 - ROS Humble
 - ZED SDK
-- 
+- CUDA
 
 ### Instructions
 
