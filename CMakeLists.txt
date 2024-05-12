@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.8)
 project(zed_bridge)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-  add_compile_options(-Wall -Wextra -Wpedantic)
+  # add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
 # find dependencies
@@ -12,6 +12,10 @@ find_package(ament_cmake REQUIRED)
 # find_package(<dependency> REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(sensor_msgs REQUIRED)
+# find the ZED SDK
+find_package(ZED 3 REQUIRED)
+# find the correct CUDA version
+find_package(CUDA ${ZED_CUDA_VERSION} REQUIRED)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
@@ -25,8 +29,22 @@ if(BUILD_TESTING)
   ament_lint_auto_find_test_dependencies()
 endif()
 
+# setup the include directories
+include_directories(include)
+include_directories(${CUDA_INCLUDE_DIRS})
+include_directories(${ZED_INCLUDE_DIRS})
+
+# link the ZED and CUDA libraries
+link_directories(${ZED_LIBRARY_DIR})
+link_directories(${CUDA_LIBRARY_DIRS})
+
 add_executable(zed_bridge src/zed_bridge.cpp)
 ament_target_dependencies(zed_bridge rclcpp sensor_msgs)
+
+target_link_libraries(zed_bridge
+  ${ZED_LIBRARIES}
+  ${CUDA_LIBRARIES}
+)
 
 install(TARGETS
   zed_bridge
