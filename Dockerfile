@@ -41,3 +41,5 @@ COPY . /catkin_ws/src/zed_bridge
 
 # Run the package
 # CMD /bin/bash -c "source /catkin_ws/devel/setup.bash && ros2 run zed_bridge zed_bridge"
+
+WORKDIR /catkin_ws
