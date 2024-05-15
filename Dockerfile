@@ -30,6 +30,9 @@ RUN mkdir -p /catkin_ws/src
 # install colcon and dependencies
 RUN apt-get install -y python3-colcon-common-extensions python3-vcstool
 
+# Install foxglove bridge
+RUN apt-get install -y ros-humble-foxglove-bridge
+
 # Copy the package to the container
 COPY . /catkin_ws/src/zed_bridge
 
