@@ -6,7 +6,7 @@ ZedBridge::ZedBridge() : Node("zed_bridge") {
     // https://www.stereolabs.com/docs/video/camera-controls
     InitParameters init_params;
     init_params.camera_resolution = RESOLUTION::HD720;
-    init_params.camera_fps = 30;
+    init_params.camera_fps = 60;
     init_params.coordinate_units = UNIT::METER;
     init_params.depth_mode = DEPTH_MODE::ULTRA;
 
@@ -18,12 +18,12 @@ ZedBridge::ZedBridge() : Node("zed_bridge") {
     }
 
     // create the publishers
-    this->left_image_pub = this->create_publisher<sensor_msgs::msg::Image>("left_image", 10);
-    this->right_image_pub = this->create_publisher<sensor_msgs::msg::Image>("right_image", 10);
-    this->depth_image_pub = this->create_publisher<sensor_msgs::msg::Image>("depth_image", 10);
-    this->left_info_pub = this->create_publisher<sensor_msgs::msg::CameraInfo>("left_info", 10);
-    this->right_info_pub = this->create_publisher<sensor_msgs::msg::CameraInfo>("right_info", 10);
-    this->depth_info_pub = this->create_publisher<sensor_msgs::msg::CameraInfo>("depth_info", 10);
+    this->left_image_pub = this->create_publisher<sensor_msgs::msg::Image>("/zed/image_raw", 10);
+    this->right_image_pub = this->create_publisher<sensor_msgs::msg::Image>("/zed/right/image_raw", 10);
+    this->depth_image_pub = this->create_publisher<sensor_msgs::msg::Image>("/zed/depth/image_raw", 10);
+    this->left_info_pub = this->create_publisher<sensor_msgs::msg::CameraInfo>("/zed/left/camera_info", 10);
+    this->right_info_pub = this->create_publisher<sensor_msgs::msg::CameraInfo>("/zed/right/camera_info", 10);
+    this->depth_info_pub = this->create_publisher<sensor_msgs::msg::CameraInfo>("/zed/depth/camera_info", 10);
 
     // start the publishing loop
     this->timer = this->create_wall_timer(std::chrono::milliseconds(1000/30), std::bind(&ZedBridge::publishImages, this));
