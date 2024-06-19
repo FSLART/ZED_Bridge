@@ -36,10 +36,13 @@ RUN apt-get install -y ros-humble-foxglove-bridge
 # Copy the package to the container
 COPY . /catkin_ws/src/zed_bridge
 
+# Copy the calibration file to the container
+COPY SN39866630.conf /usr/local/zed/settings/SN39866630.conf
+
+WORKDIR /catkin_ws
+
 # Build the package
 # RUN /bin/bash -c "source /opt/ros/humble/setup.bash && cd /catkin_ws && colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release"
 
 # Run the package
 # CMD /bin/bash -c "source /catkin_ws/devel/setup.bash && ros2 run zed_bridge zed_bridge"
-
-WORKDIR /catkin_ws
