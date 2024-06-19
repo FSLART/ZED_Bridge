@@ -6,7 +6,7 @@
 #include <sensor_msgs/msg/image.hpp>
 #include <sensor_msgs/msg/camera_info.hpp>
 
-#define FRAME_ID "zed_camera"
+#define FRAME_ID "zed_camera_center"
 
 using namespace sl;
 
