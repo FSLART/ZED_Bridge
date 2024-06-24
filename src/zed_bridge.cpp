@@ -36,19 +36,29 @@ void ZedBridge::publishImages() {
         sl::Mat left_image;
         zed.retrieveImage(left_image, VIEW::LEFT);
 
+        // convert the image to OpenCV format
+        cv::Mat left_image_cv = slMat2cvMat(left_image);
+        // remove last channel
+        cv::cvtColor(left_image_cv, left_image_cv, cv::COLOR_BGRA2BGR);
+
         // convert the image to a ROS message
         sensor_msgs::msg::Image left_image_msg;
         left_image_msg.header.stamp = this->now();
         left_image_msg.header.frame_id = FRAME_ID;
         left_image_msg.height = left_image.getHeight();
         left_image_msg.width = left_image.getWidth();
-        left_image_msg.encoding = "bgra8";
+        left_image_msg.encoding = "bgr8";
         left_image_msg.step = left_image.getStepBytes();
-        left_image_msg.data = std::vector<unsigned char>(left_image.getPtr<sl::uchar1>(), left_image.getPtr<sl::uchar1>() + left_image.getHeight() * left_image.getWidth() * 4);
+        left_image_msg.data = std::vector<unsigned char>(left_image_cv.data, left_image_cv.data + left_image_cv.rows * left_image_cv.cols * left_image_cv.channels());
 
         // retrieve the right image
         sl::Mat right_image;
         zed.retrieveImage(right_image, VIEW::RIGHT);
+
+        // convert the image to OpenCV format
+        cv::Mat right_image_cv = slMat2cvMat(right_image);
+        // remove last channel
+        cv::cvtColor(right_image_cv, right_image_cv, cv::COLOR_BGRA2BGR);
 
         // convert the image to a ROS message
         sensor_msgs::msg::Image right_image_msg;
@@ -56,9 +66,9 @@ void ZedBridge::publishImages() {
         right_image_msg.header.frame_id = FRAME_ID;
         right_image_msg.height = right_image.getHeight();
         right_image_msg.width = right_image.getWidth();
-        right_image_msg.encoding = "bgra8";
+        right_image_msg.encoding = "bgr8";
         right_image_msg.step = right_image.getStepBytes();
-        right_image_msg.data = std::vector<unsigned char>(right_image.getPtr<sl::uchar1>(), right_image.getPtr<sl::uchar1>() + right_image.getHeight() * right_image.getWidth() * 4);;
+        right_image_msg.data = std::vector<unsigned char>(right_image_cv.data, right_image_cv.data + right_image_cv.rows * right_image_cv.cols * right_image_cv.channels());
 
         // retrieve the depth image
         sl::Mat depth_image;
@@ -165,6 +175,32 @@ void ZedBridge::publishImages() {
         depth_info_pub->publish(depth_camera_info_msg);
     }
 
+}
+
+// Mapping between MAT_TYPE and CV_TYPE
+int ZedBridge::getOCVtype(sl::MAT_TYPE type) {
+    int cv_type = -1;
+    switch (type) {
+        case MAT_TYPE::F32_C1: cv_type = CV_32FC1; break;
+        case MAT_TYPE::F32_C2: cv_type = CV_32FC2; break;
+        case MAT_TYPE::F32_C3: cv_type = CV_32FC3; break;
+        case MAT_TYPE::F32_C4: cv_type = CV_32FC4; break;
+        case MAT_TYPE::U8_C1: cv_type = CV_8UC1; break;
+        case MAT_TYPE::U8_C2: cv_type = CV_8UC2; break;
+        case MAT_TYPE::U8_C3: cv_type = CV_8UC3; break;
+        case MAT_TYPE::U8_C4: cv_type = CV_8UC4; break;
+        default: break;
+    }
+    return cv_type;
+}
+
+/**
+* Conversion function between sl::Mat and cv::Mat
+**/
+cv::Mat ZedBridge::slMat2cvMat(sl::Mat& input) {
+    // Since cv::Mat data requires a uchar* pointer, we get the uchar1 pointer from sl::Mat (getPtr<T>())
+    // cv::Mat and sl::Mat will share a single memory structure
+    return cv::Mat(input.getHeight(), input.getWidth(), getOCVtype(input.getDataType()), input.getPtr<sl::uchar1>(MEM::CPU), input.getStepBytes(sl::MEM::CPU));
 }
 
 int main(int argc, char** argv) {

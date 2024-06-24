@@ -17,7 +17,7 @@ ROS bridge for the ZED 2i camera, since the official shitty one doesn't work.
     - `colcon build --symlink-install --parallel-workers 4`
 - Exit the container and check its ID with `docker ps --all`.
 - Run the command `docker commit --change 'CMD /bin/bash -c "source /opt/ros/humble/setup.bash /&& source /catkin_ws/install/setup.bash && ros2 launch zed_bridge zed_bridge.launch.xml"' <my-container-id> zed_bridge`.
-- Now, finally, run the command `docker run --rm -it --gpus all --network=host --privileged zed_bridge`.
+- Now, finally, run the command `docker run --rm -it --gpus all --network=host --ipc=host --privileged zed_bridge`.
 
 #### Bare metal
 - Install ROS Humble, if not already installed.
