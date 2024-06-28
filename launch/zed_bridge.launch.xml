@@ -3,6 +3,9 @@
     <!-- ZED Camera -->
     <node name="zed_bridge" pkg="zed_bridge" exec="zed_bridge" output="screen" />
 
+    <!-- Publish a static transform to base_link -->
+    <node pkg="tf2_ros" exec="static_transform_publisher" name="zed_base_link" args="0 0 0 0 0 0 base_link zed_camera_center" />
+
     <!-- Foxglove bridge -->
     <include file="$(find-pkg-share foxglove_bridge)/launch/foxglove_bridge_launch.xml" />
 

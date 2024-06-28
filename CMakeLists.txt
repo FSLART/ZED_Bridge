@@ -16,6 +16,7 @@ find_package(sensor_msgs REQUIRED)
 find_package(ZED 3 REQUIRED)
 # find the correct CUDA version
 find_package(CUDA ${ZED_CUDA_VERSION} REQUIRED)
+find_package(OpenCV REQUIRED)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
@@ -33,10 +34,12 @@ endif()
 include_directories(include)
 include_directories(${CUDA_INCLUDE_DIRS})
 include_directories(${ZED_INCLUDE_DIRS})
+include_directories(${OpenCV_INCLUDE_DIRS})
 
 # link the ZED and CUDA libraries
 link_directories(${ZED_LIBRARY_DIR})
 link_directories(${CUDA_LIBRARY_DIRS})
+link_directories(${OpenCV_LIBRARY_DIRS})
 
 add_executable(zed_bridge src/zed_bridge.cpp)
 ament_target_dependencies(zed_bridge rclcpp sensor_msgs)
@@ -44,6 +47,7 @@ ament_target_dependencies(zed_bridge rclcpp sensor_msgs)
 target_link_libraries(zed_bridge
   ${ZED_LIBRARIES}
   ${CUDA_LIBRARIES}
+  ${OpenCV_LIBS}
 )
 
 install(TARGETS

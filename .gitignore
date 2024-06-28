@@ -1,1 +1,5 @@
 bags
+build/
+install/
+log
+__pycache__

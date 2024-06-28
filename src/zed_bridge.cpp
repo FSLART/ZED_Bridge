@@ -5,25 +5,33 @@ ZedBridge::ZedBridge() : Node("zed_bridge") {
     // set configuration parameters
     // https://www.stereolabs.com/docs/video/camera-controls
     InitParameters init_params;
+    init_params.sdk_verbose = 1;
     init_params.camera_resolution = RESOLUTION::HD720;
-    init_params.camera_fps = 30;
+    init_params.depth_minimum_distance = 1.0;
+    init_params.depth_maximum_distance = 35.0;
+    init_params.camera_fps = 60;
     init_params.coordinate_units = UNIT::METER;
-    init_params.depth_mode = DEPTH_MODE::ULTRA;
+    init_params.depth_mode = DEPTH_MODE::PERFORMANCE;
+
+    // set runtime parameters
+    this->runtime_params.enable_depth = true;
+    this->runtime_params.enable_fill_mode = true;
 
     // open the camera
     auto err = this->zed.open(init_params);
     if (err != ERROR_CODE::SUCCESS) {
+        RCLCPP_WARN(this->get_logger(), "FAILURE: %d %d", (int)ERROR_CODE::CAMERA_NOT_DETECTED, (int)err);
         RCLCPP_ERROR(this->get_logger(), "Failed to open ZED camera");
         rclcpp::shutdown();
     }
 
     // create the publishers
-    this->left_image_pub = this->create_publisher<sensor_msgs::msg::Image>("left_image", 10);
-    this->right_image_pub = this->create_publisher<sensor_msgs::msg::Image>("right_image", 10);
-    this->depth_image_pub = this->create_publisher<sensor_msgs::msg::Image>("depth_image", 10);
-    this->left_info_pub = this->create_publisher<sensor_msgs::msg::CameraInfo>("left_info", 10);
-    this->right_info_pub = this->create_publisher<sensor_msgs::msg::CameraInfo>("right_info", 10);
-    this->depth_info_pub = this->create_publisher<sensor_msgs::msg::CameraInfo>("depth_info", 10);
+    this->left_image_pub = this->create_publisher<sensor_msgs::msg::Image>("/zed/left/image_raw", 10);
+    this->right_image_pub = this->create_publisher<sensor_msgs::msg::Image>("/zed/image_raw", 10);
+    this->depth_image_pub = this->create_publisher<sensor_msgs::msg::Image>("/zed/depth/image_raw", 10);
+    this->left_info_pub = this->create_publisher<sensor_msgs::msg::CameraInfo>("/zed/left/camera_info", 10);
+    this->right_info_pub = this->create_publisher<sensor_msgs::msg::CameraInfo>("/zed/right/camera_info", 10);
+    this->depth_info_pub = this->create_publisher<sensor_msgs::msg::CameraInfo>("/zed/depth/camera_info", 10);
 
     // start the publishing loop
     this->timer = this->create_wall_timer(std::chrono::milliseconds(1000/30), std::bind(&ZedBridge::publishImages, this));
@@ -31,38 +39,48 @@ ZedBridge::ZedBridge() : Node("zed_bridge") {
 
 void ZedBridge::publishImages() {
 
-    if (zed.grab() == ERROR_CODE::SUCCESS) {
+    if (zed.grab(this->runtime_parameters) == ERROR_CODE::SUCCESS) {
         // retrieve the left image
         sl::Mat left_image;
         zed.retrieveImage(left_image, VIEW::LEFT);
+
+        // convert the image to OpenCV format
+        cv::Mat left_image_cv = slMat2cvMat(left_image);
+        // remove last channel
+        cv::cvtColor(left_image_cv, left_image_cv, cv::COLOR_BGRA2BGR);
 
         // convert the image to a ROS message
         sensor_msgs::msg::Image left_image_msg;
         left_image_msg.header.stamp = this->now();
         left_image_msg.header.frame_id = FRAME_ID;
-        left_image_msg.height = left_image.getHeight();
-        left_image_msg.width = left_image.getWidth();
-        left_image_msg.encoding = "bgra8";
-        left_image_msg.step = left_image.getStepBytes();
-        left_image_msg.data = std::vector<unsigned char>(left_image.getPtr<sl::uchar1>(), left_image.getPtr<sl::uchar1>() + left_image.getHeight() * left_image.getWidth() * 4);
+        left_image_msg.height = left_image_cv.rows;
+        left_image_msg.width = left_image_cv.cols;
+        left_image_msg.encoding = "bgr8";
+        left_image_msg.step = left_image_cv.step;
+        left_image_msg.data = std::vector<unsigned char>(left_image_cv.data, left_image_cv.data + left_image_cv.rows * left_image_cv.cols * left_image_cv.channels());
 
         // retrieve the right image
         sl::Mat right_image;
         zed.retrieveImage(right_image, VIEW::RIGHT);
 
+        // convert the image to OpenCV format
+        cv::Mat right_image_cv = slMat2cvMat(right_image);
+        // remove last channel
+        cv::cvtColor(right_image_cv, right_image_cv, cv::COLOR_BGRA2BGR);
+
         // convert the image to a ROS message
         sensor_msgs::msg::Image right_image_msg;
         right_image_msg.header.stamp = this->now();
         right_image_msg.header.frame_id = FRAME_ID;
-        right_image_msg.height = right_image.getHeight();
-        right_image_msg.width = right_image.getWidth();
-        right_image_msg.encoding = "bgra8";
-        right_image_msg.step = right_image.getStepBytes();
-        right_image_msg.data = std::vector<unsigned char>(right_image.getPtr<sl::uchar1>(), right_image.getPtr<sl::uchar1>() + right_image.getHeight() * right_image.getWidth() * 4);;
+        right_image_msg.height = right_image_cv.rows;
+        right_image_msg.width = right_image_cv.cols;
+        right_image_msg.encoding = "bgr8";
+        right_image_msg.step = right_image_cv.step;
+        right_image_msg.data = std::vector<unsigned char>(right_image_cv.data, right_image_cv.data + right_image_cv.rows * right_image_cv.cols * right_image_cv.channels());
 
         // retrieve the depth image
         sl::Mat depth_image;
-        zed.retrieveMeasure(depth_image, MEASURE::DEPTH);
+        zed.retrieveMeasure(depth_image, MEASURE::DEPTH_RIGHT);
 
         // convert the image to a ROS message
         sensor_msgs::msg::Image depth_image_msg;
@@ -165,6 +183,32 @@ void ZedBridge::publishImages() {
         depth_info_pub->publish(depth_camera_info_msg);
     }
 
+}
+
+// Mapping between MAT_TYPE and CV_TYPE
+int ZedBridge::getOCVtype(sl::MAT_TYPE type) {
+    int cv_type = -1;
+    switch (type) {
+        case MAT_TYPE::F32_C1: cv_type = CV_32FC1; break;
+        case MAT_TYPE::F32_C2: cv_type = CV_32FC2; break;
+        case MAT_TYPE::F32_C3: cv_type = CV_32FC3; break;
+        case MAT_TYPE::F32_C4: cv_type = CV_32FC4; break;
+        case MAT_TYPE::U8_C1: cv_type = CV_8UC1; break;
+        case MAT_TYPE::U8_C2: cv_type = CV_8UC2; break;
+        case MAT_TYPE::U8_C3: cv_type = CV_8UC3; break;
+        case MAT_TYPE::U8_C4: cv_type = CV_8UC4; break;
+        default: break;
+    }
+    return cv_type;
+}
+
+/**
+* Conversion function between sl::Mat and cv::Mat
+**/
+cv::Mat ZedBridge::slMat2cvMat(sl::Mat& input) {
+    // Since cv::Mat data requires a uchar* pointer, we get the uchar1 pointer from sl::Mat (getPtr<T>())
+    // cv::Mat and sl::Mat will share a single memory structure
+    return cv::Mat(input.getHeight(), input.getWidth(), getOCVtype(input.getDataType()), input.getPtr<sl::uchar1>(MEM::CPU), input.getStepBytes(sl::MEM::CPU));
 }
 
 int main(int argc, char** argv) {
