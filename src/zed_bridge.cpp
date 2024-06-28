@@ -5,21 +5,29 @@ ZedBridge::ZedBridge() : Node("zed_bridge") {
     // set configuration parameters
     // https://www.stereolabs.com/docs/video/camera-controls
     InitParameters init_params;
+    init_params.sdk_verbose = 1;
     init_params.camera_resolution = RESOLUTION::HD720;
+    init_params.depth_minimum_distance = 1.0;
+    init_params.depth_maximum_distance = 35.0;
     init_params.camera_fps = 60;
     init_params.coordinate_units = UNIT::METER;
-    init_params.depth_mode = DEPTH_MODE::ULTRA;
+    init_params.depth_mode = DEPTH_MODE::PERFORMANCE;
+
+    // set runtime parameters
+    this->runtime_params.enable_depth = true;
+    this->runtime_params.enable_fill_mode = true;
 
     // open the camera
     auto err = this->zed.open(init_params);
     if (err != ERROR_CODE::SUCCESS) {
+        RCLCPP_WARN(this->get_logger(), "FAILURE: %d %d", (int)ERROR_CODE::CAMERA_NOT_DETECTED, (int)err);
         RCLCPP_ERROR(this->get_logger(), "Failed to open ZED camera");
         rclcpp::shutdown();
     }
 
     // create the publishers
-    this->left_image_pub = this->create_publisher<sensor_msgs::msg::Image>("/zed/image_raw", 10);
-    this->right_image_pub = this->create_publisher<sensor_msgs::msg::Image>("/zed/right/image_raw", 10);
+    this->left_image_pub = this->create_publisher<sensor_msgs::msg::Image>("/zed/left/image_raw", 10);
+    this->right_image_pub = this->create_publisher<sensor_msgs::msg::Image>("/zed/image_raw", 10);
     this->depth_image_pub = this->create_publisher<sensor_msgs::msg::Image>("/zed/depth/image_raw", 10);
     this->left_info_pub = this->create_publisher<sensor_msgs::msg::CameraInfo>("/zed/left/camera_info", 10);
     this->right_info_pub = this->create_publisher<sensor_msgs::msg::CameraInfo>("/zed/right/camera_info", 10);
@@ -31,7 +39,7 @@ ZedBridge::ZedBridge() : Node("zed_bridge") {
 
 void ZedBridge::publishImages() {
 
-    if (zed.grab() == ERROR_CODE::SUCCESS) {
+    if (zed.grab(this->runtime_parameters) == ERROR_CODE::SUCCESS) {
         // retrieve the left image
         sl::Mat left_image;
         zed.retrieveImage(left_image, VIEW::LEFT);
@@ -45,10 +53,10 @@ void ZedBridge::publishImages() {
         sensor_msgs::msg::Image left_image_msg;
         left_image_msg.header.stamp = this->now();
         left_image_msg.header.frame_id = FRAME_ID;
-        left_image_msg.height = left_image.getHeight();
-        left_image_msg.width = left_image.getWidth();
+        left_image_msg.height = left_image_cv.rows;
+        left_image_msg.width = left_image_cv.cols;
         left_image_msg.encoding = "bgr8";
-        left_image_msg.step = left_image.getStepBytes();
+        left_image_msg.step = left_image_cv.step;
         left_image_msg.data = std::vector<unsigned char>(left_image_cv.data, left_image_cv.data + left_image_cv.rows * left_image_cv.cols * left_image_cv.channels());
 
         // retrieve the right image
@@ -64,15 +72,15 @@ void ZedBridge::publishImages() {
         sensor_msgs::msg::Image right_image_msg;
         right_image_msg.header.stamp = this->now();
         right_image_msg.header.frame_id = FRAME_ID;
-        right_image_msg.height = right_image.getHeight();
-        right_image_msg.width = right_image.getWidth();
+        right_image_msg.height = right_image_cv.rows;
+        right_image_msg.width = right_image_cv.cols;
         right_image_msg.encoding = "bgr8";
-        right_image_msg.step = right_image.getStepBytes();
+        right_image_msg.step = right_image_cv.step;
         right_image_msg.data = std::vector<unsigned char>(right_image_cv.data, right_image_cv.data + right_image_cv.rows * right_image_cv.cols * right_image_cv.channels());
 
         // retrieve the depth image
         sl::Mat depth_image;
-        zed.retrieveMeasure(depth_image, MEASURE::DEPTH);
+        zed.retrieveMeasure(depth_image, MEASURE::DEPTH_RIGHT);
 
         // convert the image to a ROS message
         sensor_msgs::msg::Image depth_image_msg;

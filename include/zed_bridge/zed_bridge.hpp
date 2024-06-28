@@ -19,6 +19,7 @@ class ZedBridge : public rclcpp::Node {
     private:
         std::string frame_id;
         Camera zed;
+        RuntimeParameters runtime_parameters;
         rclcpp::TimerBase::SharedPtr timer;
         rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr left_image_pub;
         rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr right_image_pub;

@@ -7,20 +7,20 @@ ENV PATH=/usr/local/cuda/bin:$PATH
 # Update the system
 RUN apt-get update && apt-get upgrade -y
 
+RUN echo "hello"
 # Install ZED SDK
 RUN apt-get install -y --no-install-recommends \
     wget \
     unzip \
     zstd
-RUN wget https://download.stereolabs.com/zedsdk/4.1/cu121/ubuntu22 -O zed_sdk_v4.1.0.run
-RUN chmod +x zed_sdk_v4.1.0.run
-RUN ./zed_sdk_v4.1.0.run -- silent skip_cuda skip_tools
-RUN rm zed_sdk_v4.1.0.run
+RUN wget https://download.stereolabs.com/zedsdk/4.1/cu121/ubuntu22 -O zed_sdk_v4.1.2.run
+RUN chmod +x zed_sdk_v4.1.2.run
+RUN ./zed_sdk_v4.1.2.run -- silent skip_cuda skip_tools
+RUN rm zed_sdk_v4.1.2.run
 
 # Update the system and install the CUDA toolkit
 ENV NVIDIA_DRIVER_CAPABILITIES video,compute,utility
 
-RUN echo "hello"
 RUN apt-get update && apt upgrade -y
 
 # Install the dependencies
