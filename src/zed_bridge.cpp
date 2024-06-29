@@ -14,8 +14,8 @@ ZedBridge::ZedBridge() : Node("zed_bridge") {
     init_params.depth_mode = DEPTH_MODE::PERFORMANCE;
 
     // set runtime parameters
-    this->runtime_params.enable_depth = true;
-    this->runtime_params.enable_fill_mode = true;
+    this->runtime_parameters.enable_depth = true;
+    this->runtime_parameters.enable_fill_mode = true;
 
     // open the camera
     auto err = this->zed.open(init_params);
