@@ -12,6 +12,7 @@ ZedBridge::ZedBridge() : Node("zed_bridge") {
     init_params.camera_fps = 60;
     init_params.coordinate_units = UNIT::METER;
     init_params.depth_mode = DEPTH_MODE::PERFORMANCE;
+    init_params.enable_right_side_measure = true;
 
     // set runtime parameters
     this->runtime_parameters.enable_depth = true;

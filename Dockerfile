@@ -29,6 +29,10 @@ RUN apt-get install -y ros-humble-sensor-msgs libopencv-dev
 # Create the workspace
 RUN mkdir -p /catkin_ws/src
 
+# Clone lart_msgs
+WORKDIR /catkin_ws/src
+RUN git clone -b dev https://github.com/FSLART/lart_msgs.git
+
 # install colcon and dependencies
 RUN apt-get install -y python3-colcon-common-extensions python3-vcstool
 
