@@ -34,6 +34,10 @@ ZedBridge::ZedBridge() : Node("zed_bridge") {
     this->right_info_pub = this->create_publisher<sensor_msgs::msg::CameraInfo>("/zed/right/camera_info", 10);
     this->depth_info_pub = this->create_publisher<sensor_msgs::msg::CameraInfo>("/zed/depth/camera_info", 10);
 
+    // initialize the transform broadcaster
+    this->tf_broadcaster = std::make_shared<tf2_ros::TransformBroadcaster>(this);
+    this->transform_timer = this->create_wall_timer(std::chrono::milliseconds(100), std::bind(&ZedBridge::broadcastTransform, this));
+
     // start the publishing loop
     this->timer = this->create_wall_timer(std::chrono::milliseconds(1000/30), std::bind(&ZedBridge::publishImages, this));
 }
@@ -53,7 +57,7 @@ void ZedBridge::publishImages() {
         // convert the image to a ROS message
         sensor_msgs::msg::Image left_image_msg;
         left_image_msg.header.stamp = this->now();
-        left_image_msg.header.frame_id = FRAME_ID;
+        left_image_msg.header.frame_id = LEFT_IMG_FRAME_ID;
         left_image_msg.height = left_image_cv.rows;
         left_image_msg.width = left_image_cv.cols;
         left_image_msg.encoding = "bgr8";
@@ -72,7 +76,7 @@ void ZedBridge::publishImages() {
         // convert the image to a ROS message
         sensor_msgs::msg::Image right_image_msg;
         right_image_msg.header.stamp = this->now();
-        right_image_msg.header.frame_id = FRAME_ID;
+        right_image_msg.header.frame_id = RIGHT_IMG_FRAME_ID;
         right_image_msg.height = right_image_cv.rows;
         right_image_msg.width = right_image_cv.cols;
         right_image_msg.encoding = "bgr8";
@@ -86,7 +90,7 @@ void ZedBridge::publishImages() {
         // convert the image to a ROS message
         sensor_msgs::msg::Image depth_image_msg;
         depth_image_msg.header.stamp = this->now();
-        depth_image_msg.header.frame_id = FRAME_ID;
+        depth_image_msg.header.frame_id = RIGHT_IMG_FRAME_ID;
         depth_image_msg.height = depth_image.getHeight();
         depth_image_msg.width = depth_image.getWidth();
         depth_image_msg.encoding = "32FC1";
@@ -100,7 +104,7 @@ void ZedBridge::publishImages() {
         // create the camera info messages
         sensor_msgs::msg::CameraInfo left_camera_info_msg;
         left_camera_info_msg.header.stamp = this->now();
-        left_camera_info_msg.header.frame_id = FRAME_ID;
+        left_camera_info_msg.header.frame_id = LEFT_IMG_FRAME_ID;
         left_camera_info_msg.height = left_image_msg.height;
         left_camera_info_msg.width = left_image_msg.width;
         left_camera_info_msg.distortion_model = "plumb_bob";
@@ -125,7 +129,7 @@ void ZedBridge::publishImages() {
 
         sensor_msgs::msg::CameraInfo right_camera_info_msg;
         right_camera_info_msg.header.stamp = this->now();
-        right_camera_info_msg.header.frame_id = FRAME_ID;
+        right_camera_info_msg.header.frame_id = RIGHT_IMG_FRAME_ID;
         right_camera_info_msg.height = right_image_msg.height;
         right_camera_info_msg.width = right_image_msg.width;
         right_camera_info_msg.distortion_model = "plumb_bob";
@@ -150,7 +154,7 @@ void ZedBridge::publishImages() {
 
         sensor_msgs::msg::CameraInfo depth_camera_info_msg;
         depth_camera_info_msg.header.stamp = this->now();
-        depth_camera_info_msg.header.frame_id = FRAME_ID;
+        depth_camera_info_msg.header.frame_id = RIGHT_IMG_FRAME_ID;
         depth_camera_info_msg.height = depth_image_msg.height;
         depth_camera_info_msg.width = depth_image_msg.width;
         depth_camera_info_msg.distortion_model = "plumb_bob";
@@ -184,6 +188,50 @@ void ZedBridge::publishImages() {
         depth_info_pub->publish(depth_camera_info_msg);
     }
 
+}
+
+void ZedBridge::broadcastTransform() {
+
+    // get the camera calibration parameters
+    sl::CameraInformation camera_info = zed.getCameraInformation();
+    sl::CalibrationParameters calibration_params = camera_info.camera_configuration.calibration_parameters;
+    float baseline = calibration_params.getCameraBaseline();
+
+    // create the right lens transform
+    geometry_msgs::msg::TransformStamped transform;
+    tf2::Quaternion q;
+    
+
+    transform.header.stamp = this->get_clock()->now();
+    transform.header.frame_id = CAMERA_FRAME_ID;
+    transform.child_frame_id = RIGHT_IMG_FRAME_ID;
+    transform.transform.translation.x = 0;
+    transform.transform.translation.y = -baseline/2.0;
+    transform.transform.translation.z = 0;
+    q.setRPY(0, 0, 0);
+    transform.transform.rotation.x = q.x();
+    transform.transform.rotation.y = q.y();
+    transform.transform.rotation.z = q.z();
+    transform.transform.rotation.w = q.w();
+    
+    // broadcast the transform
+    this->tf_broadcaster->sendTransform(transform);
+
+    // create the left lens transform
+    transform.header.stamp = this->get_clock()->now();
+    transform.header.frame_id = CAMERA_FRAME_ID;
+    transform.child_frame_id = LEFT_IMG_FRAME_ID;
+    transform.transform.translation.x = 0;
+    transform.transform.translation.y = baseline/2.0;
+    transform.transform.translation.z = 0;
+    q.setRPY(0, 0, 0);
+    transform.transform.rotation.x = q.x();
+    transform.transform.rotation.y = q.y();
+    transform.transform.rotation.z = q.z();
+    transform.transform.rotation.w = q.w();
+
+    // broadcast the transform
+    this->tf_broadcaster->sendTransform(transform);
 }
 
 // Mapping between MAT_TYPE and CV_TYPE

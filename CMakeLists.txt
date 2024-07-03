@@ -12,6 +12,9 @@ find_package(ament_cmake REQUIRED)
 # find_package(<dependency> REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(sensor_msgs REQUIRED)
+find_package(tf2 REQUIRED)
+find_package(tf2_ros REQUIRED)
+find_package(geometry_msgs REQUIRED)
 # find the ZED SDK
 find_package(ZED 3 REQUIRED)
 # find the correct CUDA version
@@ -42,7 +45,7 @@ link_directories(${CUDA_LIBRARY_DIRS})
 link_directories(${OpenCV_LIBRARY_DIRS})
 
 add_executable(zed_bridge src/zed_bridge.cpp)
-ament_target_dependencies(zed_bridge rclcpp sensor_msgs)
+ament_target_dependencies(zed_bridge rclcpp sensor_msgs tf2 tf2_ros geometry_msgs)
 
 target_link_libraries(zed_bridge
   ${ZED_LIBRARIES}

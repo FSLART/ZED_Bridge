@@ -21,10 +21,11 @@ RUN rm zed_sdk_v4.1.2.run
 # Update the system and install the CUDA toolkit
 ENV NVIDIA_DRIVER_CAPABILITIES video,compute,utility
 
+RUN echo "hello"
 RUN apt-get update && apt upgrade -y
 
 # Install the dependencies
-RUN apt-get install -y ros-humble-sensor-msgs libopencv-dev
+RUN apt-get install -y ros-humble-sensor-msgs ros-humble-geometry-msgs ros-humble-tf2 ros-humble-tf2-ros libopencv-dev
 
 # Create the workspace
 RUN mkdir -p /catkin_ws/src
