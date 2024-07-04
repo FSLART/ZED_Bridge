@@ -11,5 +11,5 @@ def generate_launch_description():
             name='zed_bridge'
         ),
         # Static transform publisher
-        Node(package="tf2_ros", executable="static_transform_publisher", arguments=["0", "0", "0", "0", "0", "0", "base_link", "zed_camera_center"]),
+        Node(package="tf2_ros", executable="static_transform_publisher", arguments=["-0.5", "0", "0.95", "0", "0", "0", "base_footprint", "zed_camera_center"]),
     ])
