@@ -175,30 +175,11 @@ void ZedBridge::publishImages() {
         for (int i = 0; i < objects.object_list.size(); i++) {
             //debug
             auto obj = objects.object_list[i];
-            // Get center of bounding box
-            auto bbox = obj.bounding_box_2d;
-            int u = static_cast<int>((bbox[0].x + bbox[2].x) / 2.0);
-            int v = static_cast<int>((bbox[0].y + bbox[2].y) / 2.0);
 
-            // Get 3D point from point cloud
-            sl::float4 point_cloud_value;
-            point_cloud.getValue(u, v, &point_cloud_value);
-
-            if (!(std::isfinite(point_cloud_value.x) && std::isfinite(point_cloud_value.y) && std::isfinite(point_cloud_value.z))) {
-
-            obj.position.x = point_cloud_value.x;
-            obj.position.y = point_cloud_value.y;
-            obj.position.z = point_cloud_value.z;
-            // RCLCPP_INFO(this->get_logger(), "Object %d: %d", i, obj.raw_label);
-            // RCLCPP_INFO(this->get_logger(), "Confidence: %f", obj.confidence);
+            if (std::isnan(obj.position.x) || std::isinf(obj.position.x)) {
+                continue;
+            }
             RCLCPP_INFO(this->get_logger(), "Position: (%f, %f, %f)", obj.position.x, obj.position.y, obj.position.z);
-
-            //apply transformation to object position
-            // float obj_x = obj.position.z;
-            // float obj_y = -obj.position.x;
-            // float obj_z = obj.position.y;
-
-            if (!std::isfinite(obj.position.x)) {
 
             float distance = sqrt(obj.position.x * obj.position.x + obj.position.y * obj.position.y);
             if (distance < 0.5 || distance > 20.0) {
@@ -232,11 +213,8 @@ void ZedBridge::publishImages() {
             marker.header.stamp = this->now();
             //marker.id = (this->frame_counter + i) % 1000000000; ---> commented by Pedro
             marker.ns = "cone_marker"; // NEW 16/05/2024 - Pedro
-            //marker.id = this->frame_counter * 1000 + i; // NEW 16/05/2024 - Pedro
-            marker.id = obj.id; // Use persistent object ID from ZED SDK (only when tracking is enabled)
-            if (marker.id >= 0) {
-                this->marker_ids.push_back(marker.id);
-            }
+            marker.id = this->frame_counter * 1000 + i; // NEW 16/05/2024 - Pedro
+            this->marker_ids.push_back(marker.id);
 
             marker.type = visualization_msgs::msg::Marker::CYLINDER;
             marker.action = visualization_msgs::msg::Marker::ADD;
