@@ -74,7 +74,7 @@ ZedBridge::ZedBridge() : Node("zed_bridge") {
     // // Apply ROI for AEC
     // this->zed.setRegionOfInterest(this->zed.getRetrieveImageResolution(), roi);
     // // Until this part --- remove if not working
-    this->zed.setCameraSettings(VIDEO_SETTINGS::AEC_AGC, roi, SIDE::BOTH, false);  // Enable AEC to work with ROI
+    this->zed.setCameraSettings(VIDEO_SETTINGS::AEC_AGC, roi, SIDE::BOTH, true);  // Enable AEC to work with ROI
 
     PositionalTrackingParameters tracking_params;
     this->zed.enablePositionalTracking(tracking_params);
