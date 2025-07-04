@@ -39,47 +39,20 @@ ZedBridge::ZedBridge() : Node("zed_bridge") {
         rclcpp::shutdown();
     }
 
-    // this->zed.setCameraSettings(VIDEO_SETTINGS::AEC_AGC, 1);  // Enable AEC to work with ROI
-
-
-    // Create a mask for the region of interest
-    sl::Mat roi_mask(this->zed.getCameraInformation().camera_configuration.resolution, sl::MAT_TYPE::U8_C1, sl::MEM::CPU);
-    roi_mask.setTo<sl::uchar1>(0); // Initialize the mask to zeros
-
-    // Define the ROI rectangle
+   // Define the ROI rectangle for AEC
     sl::Rect roi;
     roi.x = 528;
     roi.y = 720;
     roi.width = 864;
     roi.height = 372;
 
-    // Set the ROI in the mask
-    for (int y = roi.y; y < roi.y + roi.height; ++y) {
-        for (int x = roi.x; x < roi.x + roi.width; ++x) {
-            roi_mask.setValue<sl::uchar1>(x, y, 255); // Set the ROI area to 255
-        }
-    }
+    // Apply ROI for AEC/AGC
+    this->zed.setCameraSettings(VIDEO_SETTINGS::AEC_AGC, roi, SIDE::BOTH, true);
 
-    
-    // Apply the ROI mask
-    // this->zed.setRegionOfInterest(roi_mask);
-
-    // // This is NEW also 23/07/25. --- remove if not working
-    // // ROI for auto-exposure in HD1080
-    // sl::Rect roi;
-    // roi.x = 528;
-    // roi.y = 678;
-    // roi.width = 864;
-    // roi.height = 372;
-    // // Apply ROI for AEC
-    // this->zed.setRegionOfInterest(this->zed.getRetrieveImageResolution(), roi);
-    // // Until this part --- remove if not working
-    this->zed.setCameraSettings(VIDEO_SETTINGS::AEC_AGC, roi, SIDE::BOTH, true);  // Enable AEC to work with ROI
 
     PositionalTrackingParameters tracking_params;
     this->zed.enablePositionalTracking(tracking_params);
     
-
     auto od_ret = this->zed.enableObjectDetection(obj_param);
     if (od_ret != sl::ERROR_CODE::SUCCESS) {
         RCLCPP_WARN(this->get_logger(), "FAILURE:  %d", (int)od_ret);
@@ -115,8 +88,6 @@ void ZedBridge::publishImages() {
     //auto start_time = std::chrono::high_resolution_clock::now(); //measure function latency
 
     if (zed.grab(this->runtime_parameters) == ERROR_CODE::SUCCESS) {
-
-        this->marker_ids.clear();  // NEW 16/05/2024 - Pedro
 
         // retrieve the left image
         sl::Mat left_image;
@@ -171,6 +142,8 @@ void ZedBridge::publishImages() {
             old_marker.action = visualization_msgs::msg::Marker::DELETE;
             marker_array.markers.push_back(old_marker);
         }
+
+        this->marker_ids.clear();  // NEW 16/05/2024 - Pedro
 
         for (int i = 0; i < objects.object_list.size(); i++) {
             //debug
