@@ -53,12 +53,12 @@ class ZedBridge : public rclcpp::Node {
         image_transport::Publisher depth_image_pub;          // Declare the publisher for the depth image
 
         // rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr left_image_pub;
-
-        // rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr right_image_pub;
         // rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr depth_image_pub;
         rclcpp::Publisher<sensor_msgs::msg::CameraInfo>::SharedPtr left_info_pub;
-        // rclcpp::Publisher<sensor_msgs::msg::CameraInfo>::SharedPtr right_info_pub;
         rclcpp::Publisher<sensor_msgs::msg::CameraInfo>::SharedPtr depth_info_pub;
+
+
+
         rclcpp::Publisher<lart_msgs::msg::ConeArray>::SharedPtr cone_array_pub;
         rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr marker_array_pub;
         //for latency measure

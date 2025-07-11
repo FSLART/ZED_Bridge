@@ -24,10 +24,10 @@ ZedBridge::ZedBridge() : Node("zed_bridge") {
     this->runtime_parameters.confidence_threshold = 80;
 
     ObjectDetectionParameters obj_param;
-    obj_param.enable_tracking = true;
+    obj_param.enable_tracking = false;
     obj_param.enable_segmentation = false;
     obj_param.detection_model = OBJECT_DETECTION_MODEL::CUSTOM_YOLOLIKE_BOX_OBJECTS;
-    obj_param.custom_onnx_file = "/home/lart-tasha/Documents/repos/ros2_ws/src/mapper_speedrun/model/yolov11n_1024_tuned.onnx";
+    obj_param.custom_onnx_file = "/home/lart-tasha/Documents/repos/ros2_ws/src/mapper_speedrun/model/yolov11s_rdsTuned_1024.onnx";
 
     this->obj_runtime_param.detection_confidence_threshold = 85;
     
@@ -69,6 +69,9 @@ ZedBridge::ZedBridge() : Node("zed_bridge") {
 
     this->left_image_pub  = image_transport::create_publisher(this, "/zed/left/image_raw");
     this->depth_image_pub = image_transport::create_publisher(this, "/zed/depth/image_raw");
+
+    // this->left_image_pub = this->create_publisher<image_transport::Image>("/zed/left/image_raw", 10);
+    // this->depth_image_pub = this->create_publisher<image_transport::Image>("/zed/depth/image_raw", 10);
 
     this->left_info_pub = this->create_publisher<sensor_msgs::msg::CameraInfo>("/zed/left/camera_info", 10);
     this->depth_info_pub = this->create_publisher<sensor_msgs::msg::CameraInfo>("/zed/depth/camera_info", 10);
@@ -120,14 +123,6 @@ void ZedBridge::publishImages() {
         left_image_msg.step = left_image_cv.step;
         left_image_msg.data = std::vector<unsigned char>(left_image_cv.data, left_image_cv.data + left_image_cv.rows * left_image_cv.cols * left_image_cv.channels());
 
-        // retrieve the right image
-        // sl::Mat right_image;
-        // zed.retrieveImage(right_image, VIEW::RIGHT);
-
-        // convert the image to OpenCV format
-        // cv::Mat right_image_cv = slMat2cvMat(right_image);
-        // // remove last channel
-        // cv::cvtColor(right_image_cv, right_image_cv, cv::COLOR_BGRA2BGR);
 
         lart_msgs::msg::ConeArray cone_array;
         visualization_msgs::msg::MarkerArray marker_array;
@@ -244,16 +239,7 @@ void ZedBridge::publishImages() {
 
         this->marker_array_pub->publish(marker_array);
 
-        // convert the image to a ROS message
-        // sensor_msgs::msg::Image right_image_msg;
-        // right_image_msg.header.stamp = this->now();
-        // right_image_msg.header.frame_id = RIGHT_IMG_FRAME_ID;
-        // right_image_msg.height = right_image_cv.rows;
-        // right_image_msg.width = right_image_cv.cols;
-        // right_image_msg.encoding = "bgr8";
-        // right_image_msg.step = right_image_cv.step;
-        // right_image_msg.data = std::vector<unsigned char>(right_image_cv.data, right_image_cv.data + right_image_cv.rows * right_image_cv.cols * right_image_cv.channels());
-
+    
         // retrieve the depth image
         sl::Mat depth_image;
         zed.retrieveMeasure(depth_image, MEASURE::DEPTH);
@@ -265,9 +251,11 @@ void ZedBridge::publishImages() {
         depth_image_msg.header.frame_id = LEFT_IMG_FRAME_ID;
         depth_image_msg.height = depth_image.getHeight();
         depth_image_msg.width = depth_image.getWidth();
-        depth_image_msg.encoding = "32FC1";
+        depth_image_msg.encoding = "32FC1"; // 32-bit float for depth
         depth_image_msg.step = depth_image.getStepBytes();
-        depth_image_msg.data = std::vector<unsigned char>(depth_image.getPtr<sl::uchar1>(), depth_image.getPtr<sl::uchar1>() + depth_image.getHeight() * depth_image.getWidth() * 4);
+        const size_t data_size = depth_image.getHeight() * depth_image.getWidth() * sizeof(float);
+        const uint8_t* data_ptr = reinterpret_cast<const uint8_t*>(depth_image.getPtr<sl::float1>());
+        depth_image_msg.data = std::vector<uint8_t>(data_ptr, data_ptr + data_size);
 
         // get the camera calibration parameters
         sl::CameraInformation camera_info = zed.getCameraInformation();
@@ -299,31 +287,6 @@ void ZedBridge::publishImages() {
         left_camera_info_msg.p[6] = calibration_params.left_cam.cy;
         left_camera_info_msg.p[10] = 1.0;
 
-        // sensor_msgs::msg::CameraInfo right_camera_info_msg;
-        // right_camera_info_msg.header.stamp = this->now();
-        // right_camera_info_msg.header.frame_id = RIGHT_IMG_FRAME_ID;
-        // right_camera_info_msg.height = right_image_msg.height;
-        // right_camera_info_msg.width = right_image_msg.width;
-        // right_camera_info_msg.distortion_model = "plumb_bob";
-        // right_camera_info_msg.d.resize(5);
-        // right_camera_info_msg.d[0] = calibration_params.right_cam.disto[0];
-        // right_camera_info_msg.d[1] = calibration_params.right_cam.disto[1];
-        // right_camera_info_msg.d[2] = calibration_params.right_cam.disto[2];
-        // right_camera_info_msg.d[3] = calibration_params.right_cam.disto[3];
-        // right_camera_info_msg.d[4] = calibration_params.right_cam.disto[4];
-        // right_camera_info_msg.k.fill(0.0);
-        // right_camera_info_msg.k[0] = calibration_params.right_cam.fx;
-        // right_camera_info_msg.k[2] = calibration_params.right_cam.cx;
-        // right_camera_info_msg.k[4] = calibration_params.right_cam.fy;
-        // right_camera_info_msg.k[5] = calibration_params.right_cam.cy;
-        // right_camera_info_msg.k[8] = 1.0;
-        // right_camera_info_msg.p.fill(0.0);
-        // right_camera_info_msg.p[0] = calibration_params.right_cam.fx;
-        // right_camera_info_msg.p[2] = calibration_params.right_cam.cx;
-        // right_camera_info_msg.p[5] = calibration_params.right_cam.fy;
-        // right_camera_info_msg.p[6] = calibration_params.right_cam.cy;
-        // right_camera_info_msg.p[10] = 1.0;
-
         sensor_msgs::msg::CameraInfo depth_camera_info_msg;
         depth_camera_info_msg.header.stamp = this->now();
         depth_camera_info_msg.header.frame_id = LEFT_IMG_FRAME_ID;
@@ -350,16 +313,11 @@ void ZedBridge::publishImages() {
         depth_camera_info_msg.p[10] = 1.0;
 
         // publish the images
-        //left_image_pub->publish(left_image_msg);
-        //right_image_pub->publish(right_image_msg);
-        //depth_image_pub->publish(depth_image_msg);
-        left_image_pub.publish(left_image_msg); // PEDRO also changed this (due to the compressed images)
-        //right_image_pub.publish(right_image_msg); // <- NEW 23/06/25
-        depth_image_pub.publish(depth_image_msg); // <- NEW 23/06/25
+        this->left_image_pub.publish(std::make_shared<sensor_msgs::msg::Image>(left_image_msg));
+        this->depth_image_pub.publish(std::make_shared<sensor_msgs::msg::Image>(depth_image_msg));
 
         // publish the camera info
         left_info_pub->publish(left_camera_info_msg);
-        //right_info_pub->publish(right_camera_info_msg);
         depth_info_pub->publish(depth_camera_info_msg);
 
         this->frame_counter++;
