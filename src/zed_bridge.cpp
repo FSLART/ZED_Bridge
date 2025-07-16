@@ -81,10 +81,13 @@ ZedBridge::ZedBridge() : Node("zed_bridge") {
 
     // initialize the transform broadcaster
     this->tf_broadcaster = std::make_shared<tf2_ros::TransformBroadcaster>(this);
-    this->transform_timer = this->create_wall_timer(std::chrono::milliseconds(100), std::bind(&ZedBridge::broadcastTransform, this));
+    // this->transform_timer = this->create_wall_timer(std::chrono::milliseconds(100), std::bind(&ZedBridge::broadcastTransform, this));
+
+    this->tf_buffer = std::make_unique<tf2_ros::Buffer>(this->get_clock());
+    this->tf_listener = std::make_shared<tf2_ros::TransformListener>(*tf_buffer);
 
     // start the publishing loop
-    this->timer = this->create_wall_timer(std::chrono::milliseconds(1000/35), std::bind(&ZedBridge::publishImages, this));
+    this->timer = this->create_wall_timer(std::chrono::milliseconds(1000/30), std::bind(&ZedBridge::publishImages, this));
 }
 
 void ZedBridge::publishImages() {
@@ -140,6 +143,13 @@ void ZedBridge::publishImages() {
 
         this->marker_ids.clear();  // NEW 16/05/2024 - Pedro
 
+        geometry_msgs::msg::TransformStamped transform_stamped;
+        try {
+            transform_stamped = this->tf_buffer->lookupTransform("base_footprint", "zed_camera_center", rclcpp::Time(0));
+        } catch (tf2::TransformException &ex) {
+            RCLCPP_WARN(this->get_logger(), "Could not get transform: %s", ex.what());
+        }
+
         for (int i = 0; i < objects.object_list.size(); i++) {
             //debug
             auto obj = objects.object_list[i];
@@ -160,15 +170,46 @@ void ZedBridge::publishImages() {
             float obj_z = obj.position.z;
 
 
-            // apply the extrinsic matrix
-            obj.position.x = transform_matrix[0][0] * obj_x + transform_matrix[0][1] * obj_y + transform_matrix[0][2] * obj_z + transform_matrix[0][3];
-            obj.position.y = transform_matrix[1][0] * obj_x + transform_matrix[1][1] * obj_y + transform_matrix[1][2] * obj_z + transform_matrix[1][3];
-            obj.position.z = transform_matrix[2][0] * obj_x + transform_matrix[2][1] * obj_y + transform_matrix[2][2] * obj_z + transform_matrix[2][3];
+            // use the tf zed to base footprint
+            float transform_x = transform_stamped.transform.translation.x;
+            float transform_y = transform_stamped.transform.translation.y;
+            float transform_z = transform_stamped.transform.translation.z;
+            float transform_qx = transform_stamped.transform.rotation.x;
+            float transform_qy = transform_stamped.transform.rotation.y;
+            float transform_qz = transform_stamped.transform.rotation.z;
+            float transform_qw = transform_stamped.transform.rotation.w;
+
+            // create a quaternion from the transform
+            tf2::Quaternion transform_quat;
+            transform_quat.setX(transform_qx);
+            transform_quat.setY(transform_qy);
+            transform_quat.setZ(transform_qz);
+            transform_quat.setW(transform_qw);
+            // create a transform from the quaternion
+            tf2::Transform transform;
+            transform.setOrigin(tf2::Vector3(transform_x, transform_y, transform_z));
+            transform.setRotation(transform_quat);
+            // apply the transform to the object position
+            tf2::Vector3 obj_position(obj_x, obj_y, obj_z);
+            obj_position = transform * obj_position;
+            obj_x = obj_position.x();
+            obj_y = obj_position.y();
+            obj_z = obj_position.z();
+
+
+
+
+            // // apply the extrinsic matrix
+            // obj.position.x = transform_matrix[0][0] * obj_x + transform_matrix[0][1] * obj_y + transform_matrix[0][2] * obj_z + transform_matrix[0][3];
+            // obj.position.y = transform_matrix[1][0] * obj_x + transform_matrix[1][1] * obj_y + transform_matrix[1][2] * obj_z + transform_matrix[1][3];
+            // obj.position.z = transform_matrix[2][0] * obj_x + transform_matrix[2][1] * obj_y + transform_matrix[2][2] * obj_z + transform_matrix[2][3];
 
             //create cone message
             lart_msgs::msg::Cone cone;
-            cone.position.x = obj.position.x;
-            cone.position.y = obj.position.y;
+            // cone.position.x = obj.position.x;
+            // cone.position.y = obj.position.y;
+            cone.position.x = obj_x;
+            cone.position.y = obj_y;
             cone.position.z = 0.0;
             cone.class_type.data = obj.raw_label;
 
@@ -333,6 +374,12 @@ void ZedBridge::publishImages() {
     // }
 }
 
+void ZedBridge::transformListener(const geometry_msgs::msg::TransformStamped & transform) {
+    // This function is not used in this implementation, but can be used to listen to transforms
+    // if needed in the future.
+    RCLCPP_INFO(this->get_logger(), "Received transform from %s to %s", transform.header.frame_id.c_str(), transform.child_frame_id.c_str());
+}
+
 void ZedBridge::broadcastTransform() {
 
     // get the camera calibration parameters
@@ -393,6 +440,8 @@ int ZedBridge::getOCVtype(sl::MAT_TYPE type) {
     }
     return cv_type;
 }
+
+
 
 /**
 * Conversion function between sl::Mat and cv::Mat
