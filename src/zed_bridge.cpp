@@ -153,6 +153,9 @@ void ZedBridge::publishImages() {
         for (int i = 0; i < objects.object_list.size(); i++) {
             //debug
             auto obj = objects.object_list[i];
+            
+            // Filter by ZED SDK object confidence due to ignoring runtime_params confidence // 18 Jul 2025
+            if (obj.confidence < 50) continue;
 
             if (std::isnan(obj.position.x) || std::isinf(obj.position.x)) {
                 continue;
