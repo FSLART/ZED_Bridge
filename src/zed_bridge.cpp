@@ -91,7 +91,7 @@ ZedBridge::ZedBridge() : Node("zed_bridge") {
 }
 
 void ZedBridge::publishImages() {
-    //auto start_time = std::chrono::high_resolution_clock::now(); //measure function latency
+    // auto start_time = std::chrono::high_resolution_clock::now(); //measure function latency
 
     if (zed.grab(this->runtime_parameters) == ERROR_CODE::SUCCESS) {
 
@@ -108,7 +108,7 @@ void ZedBridge::publishImages() {
         // RCLCPP_INFO(this->get_logger(), "Number of objects detected: %ld", objects.object_list.size());
         auto end_time = std::chrono::high_resolution_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count();
-        RCLCPP_INFO(this->get_logger(), "Object detection latency: %ld ms", duration);
+        // RCLCPP_INFO(this->get_logger(), "Object detection latency: %ld ms", duration);
 
 
         // convert the image to OpenCV format
@@ -157,7 +157,7 @@ void ZedBridge::publishImages() {
             if (std::isnan(obj.position.x) || std::isinf(obj.position.x)) {
                 continue;
             }
-            RCLCPP_INFO(this->get_logger(), "Position: (%f, %f, %f)", obj.position.x, obj.position.y, obj.position.z);
+            // RCLCPP_INFO(this->get_logger(), "Position: (%f, %f, %f)", obj.position.x, obj.position.y, obj.position.z);
 
             float distance = sqrt(obj.position.x * obj.position.x + obj.position.y * obj.position.y);
             if (distance < 0.5 || distance > 20.0) {
@@ -170,46 +170,47 @@ void ZedBridge::publishImages() {
             float obj_z = obj.position.z;
 
 
-            // use the tf zed to base footprint
-            float transform_x = transform_stamped.transform.translation.x;
-            float transform_y = transform_stamped.transform.translation.y;
-            float transform_z = transform_stamped.transform.translation.z;
-            float transform_qx = transform_stamped.transform.rotation.x;
-            float transform_qy = transform_stamped.transform.rotation.y;
-            float transform_qz = transform_stamped.transform.rotation.z;
-            float transform_qw = transform_stamped.transform.rotation.w;
+            // // use the tf zed to base footprint
+            // float transform_x = transform_stamped.transform.translation.x;
+            // float transform_y = transform_stamped.transform.translation.y;
+            // float transform_z = transform_stamped.transform.translation.z;
+            // float transform_qx = transform_stamped.transform.rotation.x;
+            // float transform_qy = transform_stamped.transform.rotation.y;
+            // float transform_qz = transform_stamped.transform.rotation.z;
+            // float transform_qw = transform_stamped.transform.rotation.w;
 
-            // create a quaternion from the transform
-            tf2::Quaternion transform_quat;
-            transform_quat.setX(transform_qx);
-            transform_quat.setY(transform_qy);
-            transform_quat.setZ(transform_qz);
-            transform_quat.setW(transform_qw);
-            // create a transform from the quaternion
-            tf2::Transform transform;
-            transform.setOrigin(tf2::Vector3(transform_x, transform_y, transform_z));
-            transform.setRotation(transform_quat);
-            // apply the transform to the object position
-            tf2::Vector3 obj_position(obj_x, obj_y, obj_z);
-            obj_position = transform * obj_position;
-            obj_x = obj_position.x();
-            obj_y = obj_position.y();
-            obj_z = obj_position.z();
-
-
+            // // create a quaternion from the transform
+            // tf2::Quaternion transform_quat;
+            // transform_quat.setX(transform_qx);
+            // transform_quat.setY(transform_qy);
+            // transform_quat.setZ(transform_qz);
+            // transform_quat.setW(transform_qw);
+            // // create a transform from the quaternion
+            // tf2::Transform transform;
+            // transform.setOrigin(tf2::Vector3(transform_x, transform_y, transform_z));
+            // transform.setRotation(transform_quat);
+            // // apply the transform to the object position
+            // tf2::Vector3 obj_position(obj_x, obj_y, obj_z);
+            // obj_position = transform * obj_position;
+            // obj_x = obj_position.x();
+            // obj_y = obj_position.y();
+            // obj_z = obj_position.z();
 
 
-            // // apply the extrinsic matrix
-            // obj.position.x = transform_matrix[0][0] * obj_x + transform_matrix[0][1] * obj_y + transform_matrix[0][2] * obj_z + transform_matrix[0][3];
-            // obj.position.y = transform_matrix[1][0] * obj_x + transform_matrix[1][1] * obj_y + transform_matrix[1][2] * obj_z + transform_matrix[1][3];
-            // obj.position.z = transform_matrix[2][0] * obj_x + transform_matrix[2][1] * obj_y + transform_matrix[2][2] * obj_z + transform_matrix[2][3];
+
+
+            // apply the extrinsic matrix
+            obj.position.x = transform_matrix[0][0] * obj_x + transform_matrix[0][1] * obj_y + transform_matrix[0][2] * obj_z + transform_matrix[0][3];
+            obj.position.y = transform_matrix[1][0] * obj_x + transform_matrix[1][1] * obj_y + transform_matrix[1][2] * obj_z + transform_matrix[1][3];
+            obj.position.z = transform_matrix[2][0] * obj_x + transform_matrix[2][1] * obj_y + transform_matrix[2][2] * obj_z + transform_matrix[2][3];
 
             //create cone message
             lart_msgs::msg::Cone cone;
-            // cone.position.x = obj.position.x;
-            // cone.position.y = obj.position.y;
-            cone.position.x = obj_x;
-            cone.position.y = obj_y;
+            cone.header.frame_id = "base_footprint";
+            cone.position.x = obj.position.x;
+            cone.position.y = obj.position.y;
+            // cone.position.x = obj_x;
+            // cone.position.y = obj_y;
             cone.position.z = 0.0;
             cone.class_type.data = obj.raw_label;
 
@@ -220,7 +221,6 @@ void ZedBridge::publishImages() {
             visualization_msgs::msg::Marker marker;
             marker.header.frame_id = "base_footprint";
             marker.header.stamp = this->now();
-            //marker.id = (this->frame_counter + i) % 1000000000; ---> commented by Pedro
             marker.ns = "cone_marker"; // NEW 16/05/2024 - Pedro
             marker.id = this->frame_counter * 1000 + i; // NEW 16/05/2024 - Pedro
             this->marker_ids.push_back(marker.id);
@@ -365,6 +365,7 @@ void ZedBridge::publishImages() {
     }
     // auto end_time = std::chrono::high_resolution_clock::now();
     // auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
+    // RCLCPP_INFO(this->get_logger(), "Image publishing latency: %ld ms", duration.count());
     // latencies.push_back(duration.count());
 
     // if (latencies.size() == 500) {
