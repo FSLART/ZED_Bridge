@@ -29,7 +29,7 @@ ZedBridge::ZedBridge() : Node("zed_bridge") {
     obj_param.enable_tracking = false;
     obj_param.enable_segmentation = false;
     obj_param.detection_model = OBJECT_DETECTION_MODEL::CUSTOM_YOLOLIKE_BOX_OBJECTS;
-    obj_param.custom_onnx_file = "/home/andre-lopes/Desktop/ros2_ws/src/mapper_speedrun/model/yolov11n_1024_tuned.onnx";
+    obj_param.custom_onnx_file = "/home/lart-tasha/Documents/repos/ros2_ws/src/mapper_speedrun/model/yolov11s_1024_tuned_second_ds.onnx";
 
     this->obj_runtime_param.detection_confidence_threshold = 85;
     
@@ -162,7 +162,7 @@ void ZedBridge::publishImages() {
             auto obj = objects.object_list[i];
             
             // Filter by ZED SDK object confidence due to ignoring runtime_params confidence // 18 Jul 2025
-            if (obj.confidence < 85) continue;
+            if (obj.confidence < 65) continue;
 
             if (std::isnan(obj.position.x) || std::isinf(obj.position.x)) {
                 continue;
@@ -207,13 +207,13 @@ void ZedBridge::publishImages() {
             // obj_z = obj_position.z();
 
 
-
-
             // apply the extrinsic matrix
             obj.position.x = transform_matrix[0][0] * obj_x + transform_matrix[0][1] * obj_y + transform_matrix[0][2] * obj_z + transform_matrix[0][3];
             obj.position.y = transform_matrix[1][0] * obj_x + transform_matrix[1][1] * obj_y + transform_matrix[1][2] * obj_z + transform_matrix[1][3];
             obj.position.z = transform_matrix[2][0] * obj_x + transform_matrix[2][1] * obj_y + transform_matrix[2][2] * obj_z + transform_matrix[2][3];
-
+            // if (obj.position.z > 1.0) {
+            //     continue; // set z to 0 if negative
+            // }
             //create cone message
             lart_msgs::msg::Cone cone;
             cone.header.frame_id = "base_footprint";
