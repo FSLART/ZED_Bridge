@@ -285,7 +285,7 @@ void ZedBridge::publishImages() {
             marker_array.markers.push_back(marker);
         }
 
-        if (zed.grab(this->runtime_parameters) == ERROR_CODE::CAMERA_NOT_DETECTED))
+        if (zed.grab(this->runtime_parameters) == ERROR_CODE::CAMERA_NOT_DETECTED)
         
         //publish cone array
         this->cone_array_pub->publish(cone_array);
