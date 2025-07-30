@@ -15,6 +15,7 @@
 #include "geometry_msgs/msg/transform_stamped.hpp"
 #include <lart_msgs/msg/cone.hpp>
 #include <lart_msgs/msg/cone_array.hpp>
+#include <lart_msgs/msg/state.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
 #include <visualization_msgs/msg/marker.hpp>
 #include <image_transport/image_transport.hpp>
@@ -55,6 +56,9 @@ class ZedBridge : public rclcpp::Node {
         std::unique_ptr<tf2_ros::Buffer> tf_buffer;
 
 
+        rclcpp::Publisher<lart_msgs::msg::State>::SharedPtr emergency_pub;
+
+
         // std::shared_ptr<image_transport::ImageTransport> it; // Declare the ImageTransport object
         image_transport::Publisher left_image_pub;           // Declare the publisher for the left image
         image_transport::Publisher depth_image_pub;          // Declare the publisher for the depth image
@@ -63,7 +67,6 @@ class ZedBridge : public rclcpp::Node {
         // rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr depth_image_pub;
         rclcpp::Publisher<sensor_msgs::msg::CameraInfo>::SharedPtr left_info_pub;
         rclcpp::Publisher<sensor_msgs::msg::CameraInfo>::SharedPtr depth_info_pub;
-
 
 
         rclcpp::Publisher<lart_msgs::msg::ConeArray>::SharedPtr cone_array_pub;

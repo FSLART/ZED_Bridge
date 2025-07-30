@@ -3,6 +3,8 @@
 
 ZedBridge::ZedBridge() : Node("zed_bridge") {
 
+    this->emergency_pub = this->create_publisher<lart_msgs::msg::State>("/pc_origin/emergency", 10);
+    
     // set configuration parameters
     // https://www.stereolabs.com/docs/video/camera-controls
     InitParameters init_params;
@@ -27,7 +29,7 @@ ZedBridge::ZedBridge() : Node("zed_bridge") {
     obj_param.enable_tracking = false;
     obj_param.enable_segmentation = false;
     obj_param.detection_model = OBJECT_DETECTION_MODEL::CUSTOM_YOLOLIKE_BOX_OBJECTS;
-    obj_param.custom_onnx_file = "/home/lart-tasha/Documents/repos/ros2_ws/src/mapper_speedrun/model/yolov11s_rdsTuned_1024.onnx";
+    obj_param.custom_onnx_file = "/home/andre-lopes/Desktop/ros2_ws/src/mapper_speedrun/model/yolov11n_1024_tuned.onnx";
 
     this->obj_runtime_param.detection_confidence_threshold = 85;
     
@@ -36,6 +38,9 @@ ZedBridge::ZedBridge() : Node("zed_bridge") {
     if (err != ERROR_CODE::SUCCESS) {
         RCLCPP_WARN(this->get_logger(), "FAILURE: %d %d", (int)ERROR_CODE::CAMERA_NOT_DETECTED, (int)err);
         RCLCPP_ERROR(this->get_logger(), "Failed to open ZED camera");
+        lart_msgs::msg::State emergency;
+        emergency.data= lart_msgs::msg::State::EMERGENCY;
+        this->emergency_pub->publish(emergency);
         rclcpp::shutdown();
     }
 
@@ -48,6 +53,7 @@ ZedBridge::ZedBridge() : Node("zed_bridge") {
 
     // Apply ROI for AEC/AGC
     this->zed.setCameraSettings(VIDEO_SETTINGS::AEC_AGC, roi, SIDE::BOTH, true);
+
 
 
     PositionalTrackingParameters tracking_params;
@@ -92,8 +98,9 @@ ZedBridge::ZedBridge() : Node("zed_bridge") {
 
 void ZedBridge::publishImages() {
     // auto start_time = std::chrono::high_resolution_clock::now(); //measure function latency
+    auto err = zed.grab(this->runtime_parameters);
 
-    if (zed.grab(this->runtime_parameters) == ERROR_CODE::SUCCESS) {
+    if (err == ERROR_CODE::SUCCESS) {
 
         // retrieve the left image
         sl::Mat left_image;
@@ -277,6 +284,8 @@ void ZedBridge::publishImages() {
             
             marker_array.markers.push_back(marker);
         }
+
+        if (zed.grab(this->runtime_parameters) == ERROR_CODE::CAMERA_NOT_DETECTED))
         
         //publish cone array
         this->cone_array_pub->publish(cone_array);
@@ -365,6 +374,11 @@ void ZedBridge::publishImages() {
         depth_info_pub->publish(depth_camera_info_msg);
 
         this->frame_counter++;
+    }else if (err != ERROR_CODE::SUCCESS) {
+        RCLCPP_WARN(this->get_logger(), "ZED camera grab failed");
+        lart_msgs::msg::State emergency;
+        emergency.data = lart_msgs::msg::State::EMERGENCY;
+        this->emergency_pub->publish(emergency);
     }
     // auto end_time = std::chrono::high_resolution_clock::now();
     // auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
