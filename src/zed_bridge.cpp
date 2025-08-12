@@ -371,11 +371,19 @@ void ZedBridge::publishImages() {
         depth_info_pub->publish(depth_camera_info_msg);
 
         this->frame_counter++;
+        this->last_image_time = std::chrono::steady_clock::now();
+        this->first_image = true;
     }else if (err != ERROR_CODE::SUCCESS) {
         RCLCPP_WARN(this->get_logger(), "ZED camera grab failed");
-        lart_msgs::msg::State emergency;
-        emergency.data = lart_msgs::msg::State::EMERGENCY;
-        this->emergency_pub->publish(emergency);
+        if (this->first_image){
+            if ( std::chrono::steady_clock::now() - this->last_image_time > std::chrono::seconds(1)) {
+                RCLCPP_ERROR(this->get_logger(), "ZED camera not responding, publishing emergency state");
+                this->first_image = false;
+            }
+            lart_msgs::msg::State emergency;
+            emergency.data = lart_msgs::msg::State::EMERGENCY;
+            this->emergency_pub->publish(emergency);
+        }
     }
     // auto end_time = std::chrono::high_resolution_clock::now();
     // auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);

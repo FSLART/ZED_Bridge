@@ -47,6 +47,8 @@ class ZedBridge : public rclcpp::Node {
         int64_t frame_counter;
         //marker ids array
         std::vector<int> marker_ids;
+        std::chrono::steady_clock::time_point last_image_time;
+        bool first_image = false;
 
         std::shared_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster;
         rclcpp::TimerBase::SharedPtr transform_timer;
