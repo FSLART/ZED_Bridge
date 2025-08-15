@@ -12,7 +12,7 @@ ZedBridge::ZedBridge() : Node("zed_bridge") {
     init_params.camera_resolution = RESOLUTION::HD1080;
     init_params.depth_minimum_distance = 0.5;
     init_params.depth_maximum_distance = 25.0;
-    init_params.camera_fps = 40;
+    init_params.camera_fps = 30;
     init_params.coordinate_units = UNIT::METER;
     init_params.depth_mode = DEPTH_MODE::NEURAL_PLUS; //previous: PERFORMANCE, ULTRA, NEURAL_PLUS
     init_params.coordinate_system=COORDINATE_SYSTEM::RIGHT_HANDED_Z_UP_X_FWD;
