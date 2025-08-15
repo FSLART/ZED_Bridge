@@ -60,6 +60,16 @@ class ZedBridge : public rclcpp::Node {
 
         rclcpp::Publisher<lart_msgs::msg::State>::SharedPtr emergency_pub;
 
+        sl::CameraInformation cached_camera_info;
+        sl::CalibrationParameters cached_calibration_params;
+        
+        // Camera info templates
+        sensor_msgs::msg::CameraInfo left_camera_info_template;
+        sensor_msgs::msg::CameraInfo depth_camera_info_template;
+        
+        // Add this method declaration:
+        void setupCameraInfoTemplates();
+
 
         // std::shared_ptr<image_transport::ImageTransport> it; // Declare the ImageTransport object
         image_transport::Publisher left_image_pub;           // Declare the publisher for the left image
