@@ -9,7 +9,7 @@ ZedBridge::ZedBridge() : Node("zed_bridge") {
     // https://www.stereolabs.com/docs/video/camera-controls
     InitParameters init_params;
     init_params.sdk_verbose = 1;
-    init_params.camera_resolution = RESOLUTION::HD1080;
+    init_params.camera_resolution = RESOLUTION::HD1200;
     init_params.depth_minimum_distance = 0.5;
     init_params.depth_maximum_distance = 25.0;
     init_params.camera_fps = 30;
@@ -24,14 +24,14 @@ ZedBridge::ZedBridge() : Node("zed_bridge") {
     // set runtime parameters
     this->runtime_parameters.enable_depth = true;
     this->runtime_parameters.enable_fill_mode = false;
-    this->runtime_parameters.confidence_threshold = 80;
+    this->runtime_parameters.confidence_threshold = 70;
 
     ObjectDetectionParameters obj_param;
     obj_param.enable_tracking = false;
     obj_param.enable_segmentation = false;
     obj_param.detection_model = OBJECT_DETECTION_MODEL::CUSTOM_YOLOLIKE_BOX_OBJECTS;
-    // obj_param.custom_onnx_file = "/home/lart-tasha/Documents/repos/ros2_ws/src/mapper_speedrun/model/yolov11s_1024_tuned_second_ds.onnx";
-    obj_param.custom_onnx_file = "/home/andre-lopes/Desktop/ros2_ws/src/mapper_speedrun/model/yolov11n_1024_tuned.onnx";
+    obj_param.custom_onnx_file = "/home/lart-tasha/Documents/repos/ros2_ws/src/mapper_speedrun/model/yolo_v8_n.onnx";
+    // obj_param.custom_onnx_file = "/home/andre-lopes/Desktop/ros2_ws/src/mapper_speedrun/model/yolov11n_1024_tuned.onnx";
 
 
 
@@ -50,10 +50,10 @@ ZedBridge::ZedBridge() : Node("zed_bridge") {
 
    // Define the ROI rectangle for AEC
     sl::Rect roi;
-    roi.x = 528;
-    roi.y = 720;
-    roi.width = 864;
-    roi.height = 372;
+    roi.x = 960;
+    roi.y = 600;
+    roi.width = 1030;
+    roi.height = 400;
 
     // Apply ROI for AEC/AGC
     this->zed.setCameraSettings(VIDEO_SETTINGS::AEC_AGC, roi, SIDE::BOTH, true);
@@ -102,6 +102,7 @@ ZedBridge::ZedBridge() : Node("zed_bridge") {
     
     // Pre-populate camera info message templates
     setupCameraInfoTemplates();
+    this->last_image_time=std::chrono::steady_clock::now();
 
     // start the publishing loop
     this->timer = this->create_wall_timer(std::chrono::milliseconds(1000/30), std::bind(&ZedBridge::publishImages, this));
@@ -217,13 +218,14 @@ void ZedBridge::publishImages() {
             const auto& obj = objects.object_list[i];
             
             // Filter early to avoid unnecessary processing
-            if (obj.confidence < 65 || std::isnan(obj.position.x) || std::isinf(obj.position.x)) {
+            if (std::isnan(obj.position.x) || std::isinf(obj.position.x)) {
                 continue;
             }
 
             // Use squared distance to avoid sqrt
             const float distance_sq = obj.position.x * obj.position.x + obj.position.y * obj.position.y;
-            if (distance_sq < 0.25f || distance_sq > 400.0f) { // 0.5^2 = 0.25, 20^2 = 400
+            RCLCPP_INFO(this->get_logger(), "Object Calculated Distance : %.2f Confidence: %.2f", sqrt(distance_sq), obj.confidence);
+            if (distance_sq < 0.25f || distance_sq > 650.0f) { // 0.5^2 = 0.25, 20^2 = 400
                 continue;
             }
 
@@ -351,15 +353,15 @@ void ZedBridge::publishImages() {
         this->first_image = true;
     }else if (err != ERROR_CODE::SUCCESS) {
         RCLCPP_WARN(this->get_logger(), "ZED camera grab failed");
-        if (this->first_image){
+        // if (this->first_image){
             if ( std::chrono::steady_clock::now() - this->last_image_time > std::chrono::seconds(1)) {
                 RCLCPP_ERROR(this->get_logger(), "ZED camera not responding, publishing emergency state");
                 this->first_image = false;
+                lart_msgs::msg::State emergency;
+                emergency.data = lart_msgs::msg::State::EMERGENCY;
+                this->emergency_pub->publish(emergency);
             }
-            lart_msgs::msg::State emergency;
-            emergency.data = lart_msgs::msg::State::EMERGENCY;
-            this->emergency_pub->publish(emergency);
-        }
+        // }
     }
 }
 
