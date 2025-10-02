@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.10)
 project(zed_bridge)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
@@ -16,10 +16,16 @@ find_package(sensor_msgs REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(geometry_msgs REQUIRED)
-# find the ZED SDK
-find_package(ZED 3 REQUIRED)
-# find the correct CUDA version
-find_package(CUDA ${ZED_CUDA_VERSION} REQUIRED)
+# Try to find the ZED SDK, but allow building without it (for CI)
+find_package(ZED 3 QUIET)
+if(ZED_FOUND)
+  add_definitions(-DWITH_ZED)
+  message(STATUS "Building with ZED SDK support")
+  # find the correct CUDA version only when ZED is present
+  find_package(CUDA ${ZED_CUDA_VERSION} REQUIRED)
+else()
+  message(WARNING "ZED SDK not found - building in mock mode (no camera)")
+endif()
 find_package(OpenCV REQUIRED)
 find_package(lart_msgs REQUIRED)
 find_package(visualization_msgs REQUIRED)
@@ -38,13 +44,17 @@ endif()
 
 # setup the include directories
 include_directories(include)
-include_directories(${CUDA_INCLUDE_DIRS})
-include_directories(${ZED_INCLUDE_DIRS})
+if(ZED_FOUND)
+  include_directories(${CUDA_INCLUDE_DIRS})
+  include_directories(${ZED_INCLUDE_DIRS})
+endif()
 include_directories(${OpenCV_INCLUDE_DIRS})
 
 # link the ZED and CUDA libraries
-link_directories(${ZED_LIBRARY_DIR})
-link_directories(${CUDA_LIBRARY_DIRS})
+if(ZED_FOUND)
+  link_directories(${ZED_LIBRARY_DIR})
+  link_directories(${CUDA_LIBRARY_DIRS})
+endif()
 link_directories(${OpenCV_LIBRARY_DIRS})
 
 
@@ -52,10 +62,14 @@ add_executable(zed_bridge src/zed_bridge.cpp)
 ament_target_dependencies(zed_bridge rclcpp sensor_msgs tf2 tf2_ros geometry_msgs lart_msgs visualization_msgs image_transport)
 
 target_link_libraries(zed_bridge
-  ${ZED_LIBRARIES}
-  ${CUDA_LIBRARIES}
   ${OpenCV_LIBS}
 )
+if(ZED_FOUND)
+  target_link_libraries(zed_bridge
+    ${ZED_LIBRARIES}
+    ${CUDA_LIBRARIES}
+  )
+endif()
 
 install(TARGETS
   zed_bridge
