@@ -31,5 +31,4 @@ jobs:
             - name: Build workspace
               run: |
                 source /opt/ros/humble/setup.bash
-                colcon test --event-handlers console_direct+
-                colcon test-result --verbose
+                colcon build --event-handlers console_direct+
