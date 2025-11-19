@@ -9,10 +9,10 @@ ZedBridge::ZedBridge() : Node("zed_bridge") {
     // https://www.stereolabs.com/docs/video/camera-controls
     InitParameters init_params;
     init_params.sdk_verbose = 1;
-    init_params.camera_resolution = RESOLUTION::HD1080;
-    init_params.depth_minimum_distance = 0.5;
-    init_params.depth_maximum_distance = 25.0;
-    init_params.camera_fps = 30;
+    init_params.camera_resolution = RESOLUTION::HD2K;
+    init_params.depth_minimum_distance = 0.5f;
+    init_params.depth_maximum_distance = 20.0;
+    init_params.camera_fps = 15;
     init_params.coordinate_units = UNIT::METER;
     init_params.depth_mode = DEPTH_MODE::NEURAL_PLUS; //previous: PERFORMANCE, ULTRA, NEURAL_PLUS
     init_params.coordinate_system=COORDINATE_SYSTEM::RIGHT_HANDED_Z_UP_X_FWD;
@@ -22,7 +22,7 @@ ZedBridge::ZedBridge() : Node("zed_bridge") {
 
     // set runtime parameters
     this->runtime_parameters.enable_depth = true;
-    this->runtime_parameters.enable_fill_mode = false;
+    this->runtime_parameters.enable_fill_mode = true;
     this->runtime_parameters.confidence_threshold = 80;
 
     ObjectDetectionParameters obj_param;
@@ -472,7 +472,7 @@ int ZedBridge::getOCVtype(sl::MAT_TYPE type) {
 cv::Mat ZedBridge::slMat2cvMat(sl::Mat& input) {
     // Since cv::Mat data requires a uchar* pointer, we get the uchar1 pointer from sl::Mat (getPtr<T>())
     // cv::Mat and sl::Mat will share a single memory structure
-    return cv::Mat(input.getHeight(), input.getWidth(), getOCVtype(input.getDataType()), input.getPtr<sl::uchar1>(MEM::CPU), input.getStepBytes(sl::MEM::CPU));
+    return cv::Mat(input.getHeight(), input.getWidth(), getOCVtype(input.getDataType()), input.getPtr<sl::uchar1>(MEM::GPU), input.getStepBytes(sl::MEM::GPU));
 }
 
 int main(int argc, char** argv) {
