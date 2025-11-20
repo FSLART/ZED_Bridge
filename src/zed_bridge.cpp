@@ -224,6 +224,20 @@ void ZedBridge::publishImages() {
             cone.position.z = 0.0;
             cone.class_type.data = obj.raw_label;
 
+            // Added by Ian
+            
+            if (obj.bounding_box_2d.size() >= 4) {
+                // Calculate the height of the cone by subtracting Bottom Y from Top Y
+                float top_y = static_cast<float>(obj.bounding_box_2d[0].y);
+                float bottom_y = static_cast<float>(obj.bounding_box_2d[2].y);
+                
+                cone.height_px = bottom_y - top_y;
+            } else {
+                cone.height_px = 0.0f; // Invalid Bounding Box
+            }
+            
+            // --- End of the addition ---
+
             //add cone to array
             cone_array.cones.push_back(cone);
 
