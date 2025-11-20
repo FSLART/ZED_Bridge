@@ -93,7 +93,7 @@ ZedBridge::ZedBridge() : Node("zed_bridge") {
     this->tf_listener = std::make_shared<tf2_ros::TransformListener>(*tf_buffer);
 
     // start the publishing loop
-    this->timer = this->create_wall_timer(std::chrono::milliseconds(1000/30), std::bind(&ZedBridge::publishImages, this));
+    this->timer = this->create_wall_timer(std::chrono::milliseconds(1000/15), std::bind(&ZedBridge::publishImages, this));
 }
 
 void ZedBridge::publishImages() {
@@ -481,3 +481,4 @@ int main(int argc, char** argv) {
     rclcpp::shutdown();
     return 0;
 }
+
