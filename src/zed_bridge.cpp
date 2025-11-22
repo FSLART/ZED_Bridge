@@ -224,7 +224,40 @@ void ZedBridge::publishImages() {
 
             // Use squared distance to avoid sqrt
             const float distance_sq = obj.position.x * obj.position.x + obj.position.y * obj.position.y;
-            RCLCPP_INFO(this->get_logger(), "Object Calculated Distance : %.2f Confidence: %.2f", sqrt(distance_sq), obj.confidence);
+            
+            // --- NEW PINHOLE LOGIC START  - Code added by Ian ---
+
+            // 1. Get Height of the bounding box in Pixels
+            float height_px = 0.0f;
+            if (obj.bounding_box_2d.size() >= 4) {
+                float top_y = static_cast<float>(obj.bounding_box_2d[0].y);
+                float bottom_y = static_cast<float>(obj.bounding_box_2d[2].y);
+                height_px = bottom_y - top_y;
+            }
+
+            // 2. Get Focal Length
+            float fy = this->cached_calibration_params.left_cam.fy;
+
+            // 3. Calculate Pinhole Distance
+            float pinhole_dist = 0.0f;
+            float cone_real_height = 0.325f; // 32.5cm
+
+            if (height_px > 0.0f) {
+                pinhole_dist = (fy * cone_real_height) / height_px;
+            }
+
+            // 4. Calculate ZED Distance
+            float zed_dist = std::sqrt(distance_sq);
+
+            RCLCPP_INFO(this->get_logger(), "Object Calculated Distance : %.2f Confidence: %.2f", zed_dist, obj.confidence);
+
+            // 5. Print the comparison
+            RCLCPP_INFO(this->get_logger(), 
+                "Comparison between distances calculated by ZED and by bounding box size:  H_px: %.0f | ZED: %.2fm | Pinhole: %.2fm | Diff: %.2fm", 
+                height_px, zed_dist, pinhole_dist, std::abs(zed_dist - pinhole_dist));
+
+            // --- NEW PINHOLE LOGIC END ---
+
             if (distance_sq < 0.25f || distance_sq > 650.0f) { // 0.5^2 = 0.25, 20^2 = 400
                 continue;
             }
