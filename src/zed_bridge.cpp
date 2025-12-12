@@ -1,5 +1,5 @@
 #include <zed_bridge/zed_bridge.hpp>
-
+#include "rclcpp_components/register_node_macro.hpp"
 
 ZedBridge::ZedBridge() : Node("zed_bridge") {
 
@@ -476,9 +476,4 @@ cv::Mat ZedBridge::slMat2cvMat(sl::Mat& input) {
     return cv::Mat(input.getHeight(), input.getWidth(), getOCVtype(input.getDataType()), input.getPtr<sl::uchar1>(MEM::CPU), input.getStepBytes(sl::MEM::CPU));
 }
 
-int main(int argc, char** argv) {
-    rclcpp::init(argc, argv);
-    rclcpp::spin(std::make_shared<ZedBridge>());
-    rclcpp::shutdown();
-    return 0;
-}
+RCLCPP_COMPONENTS_REGISTER_NODE(ZedBridge)

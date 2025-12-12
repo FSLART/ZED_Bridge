@@ -1,0 +1,16 @@
+recorder:
+  ros__parameters:
+    # Lista de tópicos que o seu zed_bridge.cpp publica
+    topics:
+      - /zed/left/image_raw
+      - /zed/depth/image_raw
+      - /zed/left/camera_info
+      - /zed/depth/camera_info
+      - /mapping/cones
+      - /mapping/cones_markers
+    
+    storage_id: "mcap"             # Formato eficiente
+    serialization_format: "cdr"
+    start_recording_immediately: false # IMPORTANTE: Começa pausado à espera de ordem
+    use_sim_time: false
+    bag_prefix: "zed_data_"        # Nome inicial do ficheiro

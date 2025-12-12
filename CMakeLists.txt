@@ -11,6 +11,7 @@ find_package(ament_cmake REQUIRED)
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(rclcpp_components REQUIRED)
 find_package(image_transport REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(tf2 REQUIRED)
@@ -48,8 +49,14 @@ link_directories(${CUDA_LIBRARY_DIRS})
 link_directories(${OpenCV_LIBRARY_DIRS})
 
 
-add_executable(zed_bridge src/zed_bridge.cpp)
-ament_target_dependencies(zed_bridge rclcpp sensor_msgs tf2 tf2_ros geometry_msgs lart_msgs visualization_msgs image_transport)
+# Mudamos para SHARED library para ser um componente
+add_library(zed_bridge SHARED src/zed_bridge.cpp)
+
+# Adicionamos rclcpp_components às dependências
+ament_target_dependencies(zed_bridge rclcpp rclcpp_components sensor_msgs tf2 tf2_ros geometry_msgs lart_msgs visualization_msgs image_transport)
+
+# Registamos o componente (Isto cria o "plugin")
+rclcpp_components_register_nodes(zed_bridge "ZedBridge")
 
 target_link_libraries(zed_bridge
   ${ZED_LIBRARIES}
@@ -57,14 +64,24 @@ target_link_libraries(zed_bridge
   ${OpenCV_LIBS}
 )
 
-install(TARGETS
-  zed_bridge
-  DESTINATION lib/${PROJECT_NAME}
+install(TARGETS zed_bridge
+  EXPORT zed_bridgeExport
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin
 )
 
+# Adicionamos 'config' à lista
 install(DIRECTORY
   launch
+  config
   DESTINATION share/${PROJECT_NAME}
+)
+
+# Instalamos o script Python da ponte
+install(PROGRAMS
+  scripts/recording_bridge.py
+  DESTINATION lib/${PROJECT_NAME}
 )
 
 ament_package()

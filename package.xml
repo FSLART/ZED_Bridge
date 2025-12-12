@@ -18,6 +18,7 @@
   <depend>tf2</depend>
   <depend>tf2_ros</depend>
   <depend>image_transport</depend>
+  <depend>rclcpp_components</depend>
 
   <export>
     <build_type>ament_cmake</build_type>
