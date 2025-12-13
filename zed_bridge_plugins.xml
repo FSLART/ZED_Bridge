@@ -1,0 +1,5 @@
+<library path="lib/zed_bridge">
+  <class type="zed_bridge::ZedBridge" base_class_type="rclcpp_components::NodeFactory">
+    <description>ZED bridge composable node</description>
+  </class>
+</library>

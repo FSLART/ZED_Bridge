@@ -48,8 +48,14 @@ def generate_launch_description():
         name='recording_bridge',
         output='screen'
     )
+    
+    tf_node = Node(
+        package="tf2_ros", 
+        executable="static_transform_publisher", 
+        arguments=["-0.5", "0", "0.95", "0", "0", "0", "base_footprint", "zed_camera_center"])
 
     return LaunchDescription([
         container,
-        bridge_node
+        bridge_node,
+        tf_node
     ])

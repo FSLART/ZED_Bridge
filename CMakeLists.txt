@@ -83,5 +83,5 @@ install(PROGRAMS
   scripts/recording_bridge.py
   DESTINATION lib/${PROJECT_NAME}
 )
-
+install(FILES zed_bridge_plugins.xml DESTINATION share/${PROJECT_NAME})
 ament_package()

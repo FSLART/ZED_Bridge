@@ -20,6 +20,7 @@
 #include <visualization_msgs/msg/marker.hpp>
 #include <image_transport/image_transport.hpp>
 #include <cmath>
+#include "rclcpp_components/register_node_macro.hpp"
 
 
 //includes for latency measure
@@ -35,7 +36,7 @@ using namespace sl;
 class ZedBridge : public rclcpp::Node {
 
     public:
-        ZedBridge();
+        explicit ZedBridge(const rclcpp::NodeOptions & options);
 
     private:
         std::string frame_id;

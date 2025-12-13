@@ -1,8 +1,6 @@
 #include <zed_bridge/zed_bridge.hpp>
-#include "rclcpp_components/register_node_macro.hpp"
 
-ZedBridge::ZedBridge() : Node("zed_bridge") {
-
+ZedBridge::ZedBridge(const rclcpp::NodeOptions & options) : Node("zed_bridge", options) {
     this->emergency_pub = this->create_publisher<lart_msgs::msg::State>("/pc_origin/emergency", 10);
     
     // set configuration parameters
@@ -45,7 +43,7 @@ ZedBridge::ZedBridge() : Node("zed_bridge") {
         lart_msgs::msg::State emergency;
         emergency.data= lart_msgs::msg::State::EMERGENCY;
         this->emergency_pub->publish(emergency);
-        rclcpp::shutdown();
+        throw std::runtime_error("Failed to open ZED camera");
     }
 
    // Define the ROI rectangle for AEC
