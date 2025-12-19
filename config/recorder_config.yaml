@@ -1,16 +1,34 @@
 recorder:
   ros__parameters:
-    # Lista de tópicos que o seu zed_bridge.cpp publica
     topics:
-      - /zed/left/image_raw
+      # --- Tópicos da ZED (Zero-Copy se estiverem no contentor) ---
+      - /zed/left/image_raw           # Adicionei este para garantir o Zero-Copy
       - /zed/depth/image_raw
-      - /zed/left/camera_info
       - /zed/depth/camera_info
+      - /zed/left/camera_info
+      - /zed/left/image_raw/compressed 
+      
+      # --- Tópicos Externos (Via Rede) ---
+      - /acu_origin/dynamics
       - /mapping/cones
       - /mapping/cones_markers
-    
-    storage_id: "mcap"             # Formato eficiente
+      - /pc_origin/dynamics
+      - /pc_origin/system_status/critical_as/mission
+      - /pc_origin/system_status/critical_as/state
+      - /planned_path_topic
+      - /rviz_path_topic
+      - /target_marker_topic
+      - /imu/angular_velocity
+      - /ekf/state
+      - /gnss_pose
+      - /ekf/stats
+      - /ekf/map
+      - /ekf/cone_markers
+      - /tf
+      - /tf_static
+      - /spac/path_marker
+
+    storage_id: "mcap"
     serialization_format: "cdr"
-    start_recording_immediately: false # IMPORTANTE: Começa pausado à espera de ordem
-    use_sim_time: false
-    bag_prefix: "zed_data_"        # Nome inicial do ficheiro
+    start_recording_immediately: false 
+    # Removemos o 'bag_prefix' daqui porque vamos defini-lo no Python dinamicamente
