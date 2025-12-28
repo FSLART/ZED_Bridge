@@ -22,6 +22,7 @@
 #include <cmath>
 #include "rclcpp_components/register_node_macro.hpp"
 #include "lart_msgs/srv/heartbeat.hpp"
+#include "foxglove_msgs/msg/image_annotations.hpp"
 
 // includes for latency measure
 #include <chrono>
@@ -87,6 +88,9 @@ private:
 
     rclcpp::Time last_capture_time;
     rclcpp::Service<lart_msgs::srv::Heartbeat>::SharedPtr timestamp_service_;
+
+    rclcpp::Publisher<foxglove_msgs::msg::ImageAnnotations>::SharedPtr annotations_pub_;
+    
     void handle_timestamp_request(const std::shared_ptr<lart_msgs::srv::Heartbeat::Request> request, std::shared_ptr<lart_msgs::srv::Heartbeat::Response> response);
 
     void publishImages();

@@ -19,6 +19,7 @@
   <depend>tf2_ros</depend>
   <depend>image_transport</depend>
   <depend>rclcpp_components</depend>
+  <depend>foxglove_msgs</depend>
 
   <export>
     <build_type>ament_cmake</build_type>

@@ -97,6 +97,8 @@ ZedBridge::ZedBridge(const rclcpp::NodeOptions &options) : Node("zed_bridge", op
     this->cone_array_pub = this->create_publisher<lart_msgs::msg::ConeArray>("/mapping/cones", 10);
     this->marker_array_pub = this->create_publisher<visualization_msgs::msg::MarkerArray>("/mapping/cones_markers", 10); // changed to /mapping/markers_array previous was markers
 
+    this->annotations_pub_ = this->create_publisher<foxglove_msgs::msg::ImageAnnotations>("/zed/image_annotations", 10);
+    
     this->last_capture_time = this->now();
     this->timestamp_service_ = this->create_service<lart_msgs::srv::Heartbeat>("zed/last_timestamp", std::bind(&ZedBridge::handle_timestamp_request, this, std::placeholders::_1, std::placeholders::_2));
 
@@ -177,10 +179,13 @@ void ZedBridge::publishImages()
         static sensor_msgs::msg::Image depth_image_msg;
         static lart_msgs::msg::ConeArray cone_array;
         static visualization_msgs::msg::MarkerArray marker_array;
+        static foxglove_msgs::msg::ImageAnnotations annotations_msg;
 
         // Clear containers instead of recreating
         cone_array.cones.clear();
         marker_array.markers.clear();
+        annotations_msg.points.clear();
+        annotations_msg.texts.clear();
 
         // convert the image to OpenCV format
         left_image_cv = slMat2cvMat(left_image);
@@ -195,9 +200,12 @@ void ZedBridge::publishImages()
         left_image_msg.step = left_image_cv.step;
 
         // More efficient image data copying
-        left_image_msg.data.assign(left_image_cv.data,
-                                   left_image_cv.data + left_image_cv.rows * left_image_cv.cols * left_image_cv.channels());
-
+        left_image_msg.data.assign(left_image_cv.data, left_image_cv.data + left_image_cv.rows * left_image_cv.cols * left_image_cv.channels());
+        
+        // Sync the annotations header with the image timestamp and frame_id to allow correct overlay in visualization        
+        annotations_msg.header.stamp = timestamp;
+        annotations_msg.header.frame_id = LEFT_IMG_FRAME_ID;
+        
         // Reserve space for known maximum objects
         cone_array.cones.reserve(objects.object_list.size());
         marker_array.markers.reserve(objects.object_list.size() + this->marker_ids.size());
@@ -331,48 +339,70 @@ void ZedBridge::publishImages()
             marker.scale.y = 0.23;
             marker.scale.z = 0.31;
 
+            // Prepare the 2D annotation to draw the object's border
+            foxglove_msgs::msg::PointsAnnotation poly;
+            poly.type = foxglove_msgs::msg::PointsAnnotation::LINE_LOOP;
+            poly.thickness = 3.0;
+
             switch (obj.raw_label)
             {
-            case 1:
-                marker.color.r = 1.0;
-                marker.color.g = 1.0;
-                marker.color.b = 0.0;
-                marker.color.a = 1.0;
+            case 1: // Yellow
+                marker.color.r = 1.0; marker.color.g = 1.0; marker.color.b = 0.0; marker.color.a = 1.0;
+                // Foxglove Color
+                poly.outline_color.r = 1.0; poly.outline_color.g = 1.0; poly.outline_color.b = 0.0; poly.outline_color.a = 1.0;
                 break;
-            case 2:
-                marker.color.r = 0.0;
-                marker.color.g = 0.0;
-                marker.color.b = 1.0;
-                marker.color.a = 1.0;
+            case 2: // Blue
+                marker.color.r = 0.0; marker.color.g = 0.0; marker.color.b = 1.0; marker.color.a = 1.0;
+                // Foxglove Color
+                poly.outline_color.r = 0.0; poly.outline_color.g = 0.0; poly.outline_color.b = 1.0; poly.outline_color.a = 1.0;
                 break;
-            case 3:
-                marker.color.r = 1.0;
-                marker.color.g = 0.5;
-                marker.color.b = 0.0;
-                marker.color.a = 1.0;
+            case 3: // Lil Orange
+                marker.color.r = 1.0; marker.color.g = 0.5; marker.color.b = 0.0; marker.color.a = 1.0;
+                // Foxglove Color
+                poly.outline_color.r = 1.0; poly.outline_color.g = 0.5; poly.outline_color.b = 0.0; poly.outline_color.a = 1.0;
                 break;
-            case 4:
-                marker.color.r = 1.0;
-                marker.color.g = 0.5;
-                marker.color.b = 0.0;
-                marker.color.a = 1.0;
-                marker.scale.x = 0.35;
-                marker.scale.y = 0.35;
-                marker.scale.z = 0.50;
+            case 4: // Big Orange
+                marker.color.r = 1.0; marker.color.g = 0.5; marker.color.b = 0.0; marker.color.a = 1.0;
+                marker.scale.x = 0.35; marker.scale.y = 0.35; marker.scale.z = 0.50;
+                // Foxglove Color
+                poly.outline_color.r = 1.0; poly.outline_color.g = 0.5; poly.outline_color.b = 0.0; poly.outline_color.a = 1.0;
                 break;
-            default:
-                marker.color.r = 1.0;
-                marker.color.g = 1.0;
-                marker.color.b = 0.0;
-                marker.color.a = 1.0;
+            default: // Default (Yellow)
+                marker.color.r = 1.0; marker.color.g = 1.0; marker.color.b = 0.0; marker.color.a = 1.0;
+                // Foxglove Color
+                poly.outline_color.r = 1.0; poly.outline_color.g = 1.0; poly.outline_color.b = 0.0; poly.outline_color.a = 1.0;
             }
 
             marker_array.markers.push_back(std::move(marker));
+
+            // Aggregate the 2D polygon and its confidence label into the outgoing message frame
+            if (obj.bounding_box_2d.size() >= 4) {
+                // Convert the 4 edges of the BBox 2D to points
+                for (const auto& pt : obj.bounding_box_2d) {
+                    geometry_msgs::msg::Point p;
+                    p.x = pt.x;
+                    p.y = pt.y;
+                    p.z = 0.0;
+                    poly.points.push_back(p);
+                }
+                annotations_msg.points.push_back(poly);
+
+                // (WIP) Add the text with the % of trust above the box
+                foxglove_msgs::msg::TextAnnotation txt;
+                txt.position.x = obj.bounding_box_2d[0].x;
+                txt.position.y = obj.bounding_box_2d[0].y - 15; // Slightly above
+                txt.position.z = 0.0;
+                txt.text = std::to_string((int)obj.confidence) + "% (WIP)";
+                txt.font_size = 20.0;
+                txt.text_color.r = 1.0; txt.text_color.g = 1.0; txt.text_color.b = 1.0; txt.text_color.a = 1.0;
+                annotations_msg.texts.push_back(txt);
+            }
         }
 
         // publish cone array and markers using move semantics
         this->cone_array_pub->publish(std::move(cone_array));
         this->marker_array_pub->publish(std::move(marker_array));
+        this->annotations_pub_->publish(annotations_msg);
 
         // retrieve the depth image
         sl::Mat depth_image;

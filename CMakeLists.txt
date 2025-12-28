@@ -17,6 +17,7 @@ find_package(sensor_msgs REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(geometry_msgs REQUIRED)
+find_package(foxglove_msgs REQUIRED)
 # find the ZED SDK
 find_package(ZED 3 REQUIRED)
 # find the correct CUDA version
