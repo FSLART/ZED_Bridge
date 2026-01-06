@@ -203,8 +203,7 @@ void ZedBridge::publishImages()
         left_image_msg.data.assign(left_image_cv.data, left_image_cv.data + left_image_cv.rows * left_image_cv.cols * left_image_cv.channels());
         
         // Sync the annotations header with the image timestamp and frame_id to allow correct overlay in visualization        
-        annotations_msg.header.stamp = timestamp;
-        annotations_msg.header.frame_id = LEFT_IMG_FRAME_ID;
+        // annotations_msg.timestamp = timestamp;
         
         // Reserve space for known maximum objects
         cone_array.cones.reserve(objects.object_list.size());
@@ -379,11 +378,10 @@ void ZedBridge::publishImages()
             if (obj.bounding_box_2d.size() >= 4) {
                 // Convert the 4 edges of the BBox 2D to points
                 for (const auto& pt : obj.bounding_box_2d) {
-                    geometry_msgs::msg::Point p;
-                    p.x = pt.x;
-                    p.y = pt.y;
-                    p.z = 0.0;
-                    poly.points.push_back(p);
+                    foxglove_msgs::msg::Point2 p2;
+                    p2.x = pt.x;
+                    p2.y = pt.y;
+                    poly.points.push_back(p2);
                 }
                 annotations_msg.points.push_back(poly);
 
@@ -391,8 +389,7 @@ void ZedBridge::publishImages()
                 foxglove_msgs::msg::TextAnnotation txt;
                 txt.position.x = obj.bounding_box_2d[0].x;
                 txt.position.y = obj.bounding_box_2d[0].y - 15; // Slightly above
-                txt.position.z = 0.0;
-                txt.text = std::to_string((int)obj.confidence) + "% (WIP)";
+                txt.text = std::to_string((int)obj.confidence) + "%";
                 txt.font_size = 20.0;
                 txt.text_color.r = 1.0; txt.text_color.g = 1.0; txt.text_color.b = 1.0; txt.text_color.a = 1.0;
                 annotations_msg.texts.push_back(txt);

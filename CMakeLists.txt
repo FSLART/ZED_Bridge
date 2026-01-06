@@ -54,7 +54,7 @@ link_directories(${OpenCV_LIBRARY_DIRS})
 add_library(zed_bridge SHARED src/zed_bridge.cpp)
 
 # Adicionamos rclcpp_components às dependências
-ament_target_dependencies(zed_bridge rclcpp rclcpp_components sensor_msgs tf2 tf2_ros geometry_msgs lart_msgs visualization_msgs image_transport)
+ament_target_dependencies(zed_bridge rclcpp rclcpp_components sensor_msgs tf2 tf2_ros geometry_msgs lart_msgs visualization_msgs image_transport foxglove_msgs)
 
 # Registamos o componente (Isto cria o "plugin")
 rclcpp_components_register_nodes(zed_bridge "ZedBridge")
