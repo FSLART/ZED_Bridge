@@ -29,10 +29,13 @@ ZedBridge::ZedBridge(const rclcpp::NodeOptions &options) : Node("zed_bridge", op
     obj_param.enable_segmentation = false;
     obj_param.detection_model = OBJECT_DETECTION_MODEL::CUSTOM_YOLOLIKE_BOX_OBJECTS;
     obj_param.custom_onnx_file = "/home/lart-tasha/Documents/repos/ros2_ws/src/mapper_speedrun/model/yolo_v8_n.onnx";
+    obj_param.allow_reduced_precision_inference = true; 
     // obj_param.custom_onnx_file = "/home/andre-lopes/Desktop/ros2_ws/src/mapper_speedrun/model/yolov11n_1024_tuned.onnx";
 
     this->obj_runtime_param.detection_confidence_threshold = 85;
-
+    
+    
+    
     // open the camera
     auto err = this->zed.open(init_params);
     if (err != ERROR_CODE::SUCCESS)
@@ -44,25 +47,37 @@ ZedBridge::ZedBridge(const rclcpp::NodeOptions &options) : Node("zed_bridge", op
         this->emergency_pub->publish(emergency);
         throw std::runtime_error("Failed to open ZED camera");
     }
-
+    
     // Define the ROI rectangle for AEC
     sl::Rect roi;
     roi.x = 960;
     roi.y = 600;
     roi.width = 1030;
     roi.height = 400;
-
+    
     // Apply ROI for AEC/AGC
     this->zed.setCameraSettings(VIDEO_SETTINGS::AEC_AGC, roi, SIDE::BOTH, true);
-
+    
     PositionalTrackingParameters tracking_params;
     this->zed.enablePositionalTracking(tracking_params);
-
+    
     auto od_ret = this->zed.enableObjectDetection(obj_param);
     if (od_ret != sl::ERROR_CODE::SUCCESS)
     {
         RCLCPP_WARN(this->get_logger(), "FAILURE:  %d", (int)od_ret);
         RCLCPP_ERROR(this->get_logger(), "Failed enable object detection");
+        rclcpp::shutdown();
+    }
+    
+    CustomObjectDetectionProperties custom_properties;
+    custom_properties.is_static = true;
+    custom_properties.is_grounded = true;
+
+    auto custom_ret = this->zed.setCustomObjectDetectionRuntimeParameters(custom_properties);
+    if (custom_ret != sl::ERROR_CODE::SUCCESS)
+    {
+        RCLCPP_WARN(this->get_logger(), "FAILURE:  %d", (int)custom_ret);
+        RCLCPP_ERROR(this->get_logger(), "Failed to set custom object detection properties");
         rclcpp::shutdown();
     }
 
