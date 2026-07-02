@@ -40,6 +40,7 @@ endif()
 
 # setup the include directories
 include_directories(include)
+include_directories(${CMAKE_SOURCE_DIR}/../lart_common)
 include_directories(${CUDA_INCLUDE_DIRS})
 include_directories(${ZED_INCLUDE_DIRS})
 include_directories(${OpenCV_INCLUDE_DIRS})

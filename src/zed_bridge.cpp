@@ -2,13 +2,13 @@
 
 ZedBridge::ZedBridge(const rclcpp::NodeOptions &options) : Node("zed_bridge", options)
 {
-    this->emergency_pub = this->create_publisher<lart_msgs::msg::State>("/pc_origin/emergency", 10);
+    this->emergency_pub = this->create_publisher<lart_msgs::msg::State>(TOPIC_STATE_NODES, 10);
 
     // set configuration parameters
     // https://www.stereolabs.com/docs/video/camera-controls
     InitParameters init_params;
     init_params.sdk_verbose = 1;
-    init_params.camera_resolution = RESOLUTION::HD1200;
+    init_params.camera_resolution = RESOLUTION::HD1080;
     init_params.depth_minimum_distance = 0.5;
     init_params.depth_maximum_distance = 25.0;
     init_params.camera_fps = 30;
@@ -85,17 +85,17 @@ ZedBridge::ZedBridge(const rclcpp::NodeOptions &options) : Node("zed_bridge", op
 
     this->frame_counter = 0;
 
-    this->left_image_pub = image_transport::create_publisher(this, "/zed/left/image_raw");
-    this->depth_image_pub = image_transport::create_publisher(this, "/zed/depth/image_raw");
+    this->left_image_pub = image_transport::create_publisher(this, TOPIC_ZED_LEFT_IMAGE_COMPRESSED);
+    this->depth_image_pub = image_transport::create_publisher(this, TOPIC_ZED_DEPTH_IMAGE);
 
     // this->left_image_pub = this->create_publisher<image_transport::Image>("/zed/left/image_raw", 10);
     // this->depth_image_pub = this->create_publisher<image_transport::Image>("/zed/depth/image_raw", 10);
 
-    this->left_info_pub = this->create_publisher<sensor_msgs::msg::CameraInfo>("/zed/left/camera_info", 10);
-    this->depth_info_pub = this->create_publisher<sensor_msgs::msg::CameraInfo>("/zed/depth/camera_info", 10);
+    this->left_info_pub = this->create_publisher<sensor_msgs::msg::CameraInfo>(TOPIC_ZED_LEFT_CAMERA_INFO, 10);
+    this->depth_info_pub = this->create_publisher<sensor_msgs::msg::CameraInfo>(TOPIC_ZED_DEPTH_CAMERA_INFO, 10);
 
-    this->cone_array_pub = this->create_publisher<lart_msgs::msg::ConeArray>("/mapping/cones", 10);
-    this->marker_array_pub = this->create_publisher<visualization_msgs::msg::MarkerArray>("/mapping/cones_markers", 10); // changed to /mapping/markers_array previous was markers
+    this->cone_array_pub = this->create_publisher<lart_msgs::msg::ConeArray>(TOPIC_CONES, 10);
+    this->marker_array_pub = this->create_publisher<visualization_msgs::msg::MarkerArray>(TOPIC_CONE_MARKERS, 10);
 
     this->annotations_pub_ = this->create_publisher<foxglove_msgs::msg::ImageAnnotations>("/zed/image_annotations", 10);
     
@@ -118,7 +118,7 @@ ZedBridge::ZedBridge(const rclcpp::NodeOptions &options) : Node("zed_bridge", op
     this->last_image_time = std::chrono::steady_clock::now();
 
     // start the publishing loop
-    this->timer = this->create_wall_timer(std::chrono::milliseconds(1000 / 30), std::bind(&ZedBridge::publishImages, this));
+    this->timer = this->create_wall_timer(std::chrono::milliseconds(1000 / 15), std::bind(&ZedBridge::publishImages, this));
 }
 
 void ZedBridge::setupCameraInfoTemplates()
@@ -255,40 +255,40 @@ void ZedBridge::publishImages()
             // Use squared distance to avoid sqrt
             const float distance_sq = obj.position.x * obj.position.x + obj.position.y * obj.position.y;
 
-            // --- NEW PINHOLE LOGIC START  - Code added by Ian ---
+            // // --- NEW PINHOLE LOGIC START  - Code added by Ian ---
 
-            // 1. Get Height of the bounding box in Pixels
-            float height_px = 0.0f;
-            if (obj.bounding_box_2d.size() >= 4)
-            {
-                float top_y = static_cast<float>(obj.bounding_box_2d[0].y);
-                float bottom_y = static_cast<float>(obj.bounding_box_2d[2].y);
-                height_px = bottom_y - top_y;
-            }
+            // // 1. Get Height of the bounding box in Pixels
+            // float height_px = 0.0f;
+            // if (obj.bounding_box_2d.size() >= 4)
+            // {
+            //     float top_y = static_cast<float>(obj.bounding_box_2d[0].y);
+            //     float bottom_y = static_cast<float>(obj.bounding_box_2d[2].y);
+            //     height_px = bottom_y - top_y;
+            // }
 
-            // 2. Get Focal Length
-            float fy = this->cached_calibration_params.left_cam.fy;
+            // // 2. Get Focal Length
+            // float fy = this->cached_calibration_params.left_cam.fy;
 
-            // 3. Calculate Pinhole Distance
-            float pinhole_dist = 0.0f;
-            float cone_real_height = 0.325f; // 32.5cm
+            // // 3. Calculate Pinhole Distance
+            // float pinhole_dist = 0.0f;
+            // float cone_real_height = 0.325f; // 32.5cm
 
-            if (height_px > 0.0f)
-            {
-                pinhole_dist = (fy * cone_real_height) / height_px;
-            }
+            // if (height_px > 0.0f)
+            // {
+            //     pinhole_dist = (fy * cone_real_height) / height_px;
+            // }
 
-            // 4. Calculate ZED Distance
-            float zed_dist = std::sqrt(distance_sq);
+            // // 4. Calculate ZED Distance
+            // float zed_dist = std::sqrt(distance_sq);
 
-            RCLCPP_INFO(this->get_logger(), "Object Calculated Distance : %.2f Confidence: %.2f", zed_dist, obj.confidence);
+            // RCLCPP_INFO(this->get_logger(), "Object Calculated Distance : %.2f Confidence: %.2f", zed_dist, obj.confidence);
 
-            // 5. Print the comparison
-            RCLCPP_INFO(this->get_logger(),
-                        "Comparison between distances calculated by ZED and by bounding box size:  H_px: %.0f | ZED: %.2fm | Pinhole: %.2fm | Diff: %.2fm",
-                        height_px, zed_dist, pinhole_dist, std::abs(zed_dist - pinhole_dist));
+            // // 5. Print the comparison
+            // RCLCPP_INFO(this->get_logger(),
+            //             "Comparison between distances calculated by ZED and by bounding box size:  H_px: %.0f | ZED: %.2fm | Pinhole: %.2fm | Diff: %.2fm",
+            //             height_px, zed_dist, pinhole_dist, std::abs(zed_dist - pinhole_dist));
 
-            // --- NEW PINHOLE LOGIC END ---
+            // // --- NEW PINHOLE LOGIC END ---
 
             if (distance_sq < 0.25f || distance_sq > 650.0f)
             { // 0.5^2 = 0.25, 20^2 = 400
@@ -298,6 +298,8 @@ void ZedBridge::publishImages()
             const float obj_x = obj.position.x;
             const float obj_y = obj.position.y;
             const float obj_z = obj.position.z;
+
+            // RCLCPP_INFO(this->get_logger(), "Position (%.2f, %.2f)", obj_x, obj_y);
 
             // Cache transformed positions
             const float transformed_x = transform_matrix[0][0] * obj_x + transform_matrix[0][1] * obj_y +
@@ -429,11 +431,11 @@ void ZedBridge::publishImages()
 
         // publish the images using move semantics
         this->left_image_pub.publish(std::make_shared<sensor_msgs::msg::Image>(std::move(left_image_msg)));
-        this->depth_image_pub.publish(std::make_shared<sensor_msgs::msg::Image>(std::move(depth_image_msg)));
+        // this->depth_image_pub.publish(std::make_shared<sensor_msgs::msg::Image>(std::move(depth_image_msg)));
 
         // publish the camera info using cached templates
         left_info_pub->publish(left_camera_info_template);
-        depth_info_pub->publish(depth_camera_info_template);
+        // depth_info_pub->publish(depth_camera_info_template);
 
         this->frame_counter++;
         this->last_image_time = std::chrono::steady_clock::now();

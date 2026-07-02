@@ -73,7 +73,7 @@ def generate_launch_description():
         output='screen',
     )
 
-    # 4. Nó de Transformada Estática (que o seu superior adicionou)
+    # 4. Nó de Transformada Estática
     tf_node = Node(
         package="tf2_ros", 
         executable="static_transform_publisher", 
