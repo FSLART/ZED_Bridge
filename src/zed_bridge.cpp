@@ -2,13 +2,13 @@
 
 ZedBridge::ZedBridge(const rclcpp::NodeOptions &options) : Node("zed_bridge", options)
 {
-    this->emergency_pub = this->create_publisher<lart_msgs::msg::State>("/pc_origin/emergency", 10);
+    this->emergency_pub = this->create_publisher<lart_msgs::msg::State>("/state/nodes", 10);
 
     // set configuration parameters
     // https://www.stereolabs.com/docs/video/camera-controls
     InitParameters init_params;
     init_params.sdk_verbose = 1;
-    init_params.camera_resolution = RESOLUTION::HD1200;
+    init_params.camera_resolution = RESOLUTION::HD1080;
     init_params.depth_minimum_distance = 0.5;
     init_params.depth_maximum_distance = 25.0;
     init_params.camera_fps = 30;
@@ -28,7 +28,7 @@ ZedBridge::ZedBridge(const rclcpp::NodeOptions &options) : Node("zed_bridge", op
     obj_param.enable_tracking = false;
     obj_param.enable_segmentation = false;
     obj_param.detection_model = OBJECT_DETECTION_MODEL::CUSTOM_YOLOLIKE_BOX_OBJECTS;
-    obj_param.custom_onnx_file = "/home/lart-tasha/Documents/repos/ros2_ws/src/mapper_speedrun/model/yolo_v8_n.onnx";
+    obj_param.custom_onnx_file = "/home/lart-fenix/Documents/repos/ros2_ws/src/mapper_speedrun/model/yolo_v8_n.onnx";
     obj_param.allow_reduced_precision_inference = true; 
     // obj_param.custom_onnx_file = "/home/andre-lopes/Desktop/ros2_ws/src/mapper_speedrun/model/yolov11n_1024_tuned.onnx";
 
@@ -40,8 +40,7 @@ ZedBridge::ZedBridge(const rclcpp::NodeOptions &options) : Node("zed_bridge", op
     auto err = this->zed.open(init_params);
     if (err != ERROR_CODE::SUCCESS)
     {
-        RCLCPP_WARN(this->get_logger(), "FAILURE: %d %d", (int)ERROR_CODE::CAMERA_NOT_DETECTED, (int)err);
-        RCLCPP_ERROR(this->get_logger(), "Failed to open ZED camera");
+        RCLCPP_ERROR(this->get_logger(), "Failed to open ZED camera: %s (code %d)", sl::toString(err).c_str(), (int)err);
         lart_msgs::msg::State emergency;
         emergency.data = lart_msgs::msg::State::EMERGENCY;
         this->emergency_pub->publish(emergency);
@@ -64,9 +63,8 @@ ZedBridge::ZedBridge(const rclcpp::NodeOptions &options) : Node("zed_bridge", op
     auto od_ret = this->zed.enableObjectDetection(obj_param);
     if (od_ret != sl::ERROR_CODE::SUCCESS)
     {
-        RCLCPP_WARN(this->get_logger(), "FAILURE:  %d", (int)od_ret);
-        RCLCPP_ERROR(this->get_logger(), "Failed enable object detection");
-        rclcpp::shutdown();
+        RCLCPP_ERROR(this->get_logger(), "Failed to enable object detection: %s (code %d)", sl::toString(od_ret).c_str(), (int)od_ret);
+        throw std::runtime_error("Failed to enable object detection");
     }
     
     CustomObjectDetectionProperties custom_properties;
@@ -76,9 +74,8 @@ ZedBridge::ZedBridge(const rclcpp::NodeOptions &options) : Node("zed_bridge", op
     auto custom_ret = this->zed.setCustomObjectDetectionRuntimeParameters(custom_properties);
     if (custom_ret != sl::ERROR_CODE::SUCCESS)
     {
-        RCLCPP_WARN(this->get_logger(), "FAILURE:  %d", (int)custom_ret);
-        RCLCPP_ERROR(this->get_logger(), "Failed to set custom object detection properties");
-        rclcpp::shutdown();
+        RCLCPP_ERROR(this->get_logger(), "Failed to set custom object detection properties: %s (code %d)", sl::toString(custom_ret).c_str(), (int)custom_ret);
+        throw std::runtime_error("Failed to set custom object detection properties");
     }
 
     this->transform_matrix[0][0] = 1.0;
@@ -119,7 +116,6 @@ ZedBridge::ZedBridge(const rclcpp::NodeOptions &options) : Node("zed_bridge", op
 
     // initialize the transform broadcaster
     this->tf_broadcaster = std::make_shared<tf2_ros::TransformBroadcaster>(this);
-    // this->transform_timer = this->create_wall_timer(std::chrono::milliseconds(100), std::bind(&ZedBridge::broadcastTransform, this));
 
     this->tf_buffer = std::make_unique<tf2_ros::Buffer>(this->get_clock());
     this->tf_listener = std::make_shared<tf2_ros::TransformListener>(*tf_buffer);
@@ -217,9 +213,9 @@ void ZedBridge::publishImages()
         // More efficient image data copying
         left_image_msg.data.assign(left_image_cv.data, left_image_cv.data + left_image_cv.rows * left_image_cv.cols * left_image_cv.channels());
         
-        // Sync the annotations header with the image timestamp and frame_id to allow correct overlay in visualization        
-        // annotations_msg.timestamp = timestamp;
-        
+        // Sync the annotations with the image timestamp so they overlay on the correct frame in visualization
+        annotations_msg.timestamp = timestamp;
+
         // Reserve space for known maximum objects
         cone_array.cones.reserve(objects.object_list.size());
         marker_array.markers.reserve(objects.object_list.size() + this->marker_ids.size());
@@ -238,24 +234,6 @@ void ZedBridge::publishImages()
 
         this->marker_ids.clear();
 
-        // Optimized transform lookup with caching
-        static geometry_msgs::msg::TransformStamped cached_transform;
-        static auto last_transform_time = std::chrono::steady_clock::now();
-
-        auto now = std::chrono::steady_clock::now();
-        if (now - last_transform_time > std::chrono::milliseconds(100))
-        {
-            try
-            {
-                cached_transform = this->tf_buffer->lookupTransform("base_footprint", "zed_camera_center", rclcpp::Time(0));
-                last_transform_time = now;
-            }
-            catch (tf2::TransformException &ex)
-            {
-                RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 1000, "Could not get transform: %s", ex.what());
-            }
-        }
-
         // Optimized object processing loop
         for (size_t i = 0; i < objects.object_list.size(); ++i)
         {
@@ -270,40 +248,40 @@ void ZedBridge::publishImages()
             // Use squared distance to avoid sqrt
             const float distance_sq = obj.position.x * obj.position.x + obj.position.y * obj.position.y;
 
-            // --- NEW PINHOLE LOGIC START  - Code added by Ian ---
+            // // --- NEW PINHOLE LOGIC START  - Code added by Ian ---
 
-            // 1. Get Height of the bounding box in Pixels
-            float height_px = 0.0f;
-            if (obj.bounding_box_2d.size() >= 4)
-            {
-                float top_y = static_cast<float>(obj.bounding_box_2d[0].y);
-                float bottom_y = static_cast<float>(obj.bounding_box_2d[2].y);
-                height_px = bottom_y - top_y;
-            }
+            // // 1. Get Height of the bounding box in Pixels
+            // float height_px = 0.0f;
+            // if (obj.bounding_box_2d.size() >= 4)
+            // {
+            //     float top_y = static_cast<float>(obj.bounding_box_2d[0].y);
+            //     float bottom_y = static_cast<float>(obj.bounding_box_2d[2].y);
+            //     height_px = bottom_y - top_y;
+            // }
 
-            // 2. Get Focal Length
-            float fy = this->cached_calibration_params.left_cam.fy;
+            // // 2. Get Focal Length
+            // float fy = this->cached_calibration_params.left_cam.fy;
 
-            // 3. Calculate Pinhole Distance
-            float pinhole_dist = 0.0f;
-            float cone_real_height = 0.325f; // 32.5cm
+            // // 3. Calculate Pinhole Distance
+            // float pinhole_dist = 0.0f;
+            // float cone_real_height = 0.325f; // 32.5cm
 
-            if (height_px > 0.0f)
-            {
-                pinhole_dist = (fy * cone_real_height) / height_px;
-            }
+            // if (height_px > 0.0f)
+            // {
+            //     pinhole_dist = (fy * cone_real_height) / height_px;
+            // }
 
-            // 4. Calculate ZED Distance
-            float zed_dist = std::sqrt(distance_sq);
+            // // 4. Calculate ZED Distance
+            // float zed_dist = std::sqrt(distance_sq);
 
-            RCLCPP_INFO(this->get_logger(), "Object Calculated Distance : %.2f Confidence: %.2f", zed_dist, obj.confidence);
+            // RCLCPP_INFO(this->get_logger(), "Object Calculated Distance : %.2f Confidence: %.2f", zed_dist, obj.confidence);
 
-            // 5. Print the comparison
-            RCLCPP_INFO(this->get_logger(),
-                        "Comparison between distances calculated by ZED and by bounding box size:  H_px: %.0f | ZED: %.2fm | Pinhole: %.2fm | Diff: %.2fm",
-                        height_px, zed_dist, pinhole_dist, std::abs(zed_dist - pinhole_dist));
+            // // 5. Print the comparison
+            // RCLCPP_INFO(this->get_logger(),
+            //             "Comparison between distances calculated by ZED and by bounding box size:  H_px: %.0f | ZED: %.2fm | Pinhole: %.2fm | Diff: %.2fm",
+            //             height_px, zed_dist, pinhole_dist, std::abs(zed_dist - pinhole_dist));
 
-            // --- NEW PINHOLE LOGIC END ---
+            // // --- NEW PINHOLE LOGIC END ---
 
             if (distance_sq < 0.25f || distance_sq > 650.0f)
             { // 0.5^2 = 0.25, 20^2 = 400
@@ -454,7 +432,7 @@ void ZedBridge::publishImages()
         this->last_image_time = std::chrono::steady_clock::now();
         this->first_image = true;
     }
-    else if (err != ERROR_CODE::SUCCESS)
+    else
     {
         RCLCPP_WARN(this->get_logger(), "ZED camera grab failed");
         // if (this->first_image){
@@ -468,57 +446,6 @@ void ZedBridge::publishImages()
         }
         // }
     }
-}
-
-void ZedBridge::transformListener(const geometry_msgs::msg::TransformStamped &transform)
-{
-    // This function is not used in this implementation, but can be used to listen to transforms
-    // if needed in the future.
-    RCLCPP_INFO(this->get_logger(), "Received transform from %s to %s", transform.header.frame_id.c_str(), transform.child_frame_id.c_str());
-}
-
-void ZedBridge::broadcastTransform()
-{
-
-    // get the camera calibration parameters
-    sl::CameraInformation camera_info = zed.getCameraInformation();
-    sl::CalibrationParameters calibration_params = camera_info.camera_configuration.calibration_parameters;
-    float baseline = calibration_params.getCameraBaseline();
-
-    // create the right lens transform
-    geometry_msgs::msg::TransformStamped transform;
-    tf2::Quaternion q;
-
-    transform.header.stamp = this->get_clock()->now();
-    transform.header.frame_id = CAMERA_FRAME_ID;
-    transform.child_frame_id = RIGHT_IMG_FRAME_ID;
-    transform.transform.translation.x = 0;
-    transform.transform.translation.y = -baseline / 2.0;
-    transform.transform.translation.z = 0;
-    q.setRPY(0, 0, 0);
-    transform.transform.rotation.x = q.x();
-    transform.transform.rotation.y = q.y();
-    transform.transform.rotation.z = q.z();
-    transform.transform.rotation.w = q.w();
-
-    // broadcast the transform
-    this->tf_broadcaster->sendTransform(transform);
-
-    // create the left lens transform
-    transform.header.stamp = this->get_clock()->now();
-    transform.header.frame_id = CAMERA_FRAME_ID;
-    transform.child_frame_id = LEFT_IMG_FRAME_ID;
-    transform.transform.translation.x = 0;
-    transform.transform.translation.y = baseline / 2.0;
-    transform.transform.translation.z = 0;
-    q.setRPY(0, 0, 0);
-    transform.transform.rotation.x = q.x();
-    transform.transform.rotation.y = q.y();
-    transform.transform.rotation.z = q.z();
-    transform.transform.rotation.w = q.w();
-
-    // broadcast the transform
-    this->tf_broadcaster->sendTransform(transform);
 }
 
 // Mapping between MAT_TYPE and CV_TYPE

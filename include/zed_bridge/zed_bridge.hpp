@@ -54,7 +54,6 @@ private:
     bool first_image = false;
 
     std::shared_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster;
-    rclcpp::TimerBase::SharedPtr transform_timer;
     rclcpp::TimerBase::SharedPtr timer;
 
     std::shared_ptr<tf2_ros::TransformListener> tf_listener;
@@ -94,8 +93,6 @@ private:
     void handle_timestamp_request(const std::shared_ptr<lart_msgs::srv::Heartbeat::Request> request, std::shared_ptr<lart_msgs::srv::Heartbeat::Response> response);
 
     void publishImages();
-    void broadcastTransform();
-    void transformListener(const geometry_msgs::msg::TransformStamped &transform);
 
     static int getOCVtype(sl::MAT_TYPE type);
     static cv::Mat slMat2cvMat(sl::Mat &input);

@@ -54,7 +54,7 @@ def generate_launch_description():
                 name='recorder',
                 parameters=[
                     recorder_config,       # Carrega os tópicos do YAML
-                    {'storage.uri': full_uri} # SOBRESCREVE o local de gravação com o nosso caminho dinâmico
+                    {'bag_name': full_uri} # SOBRESCREVE o local de gravação com o nosso caminho dinâmico
                 ],
                 extra_arguments=[{'use_intra_process_comms': True}]
             )
@@ -69,16 +69,7 @@ def generate_launch_description():
         arguments=["-0.5", "0", "0.95", "0", "0", "0", "base_footprint", "zed_camera_center"]
     )
 
-    # 5. Nó de Ponte (Trigger)
-    bridge_node = Node(
-        package='zed_bridge',
-        executable='recording_bridge.py',
-        name='recording_bridge',
-        output='screen'
-    )
-
     return LaunchDescription([
         container,
-        tf_node,
-        bridge_node
+        tf_node
     ])
