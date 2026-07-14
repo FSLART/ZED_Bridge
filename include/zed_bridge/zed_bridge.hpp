@@ -23,6 +23,7 @@
 #include "rclcpp_components/register_node_macro.hpp"
 #include "lart_msgs/srv/heartbeat.hpp"
 #include "foxglove_msgs/msg/image_annotations.hpp"
+#include "topics.h"
 
 // includes for latency measure
 #include <chrono>

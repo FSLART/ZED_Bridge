@@ -43,7 +43,7 @@ include_directories(include)
 include_directories(${CUDA_INCLUDE_DIRS})
 include_directories(${ZED_INCLUDE_DIRS})
 include_directories(${OpenCV_INCLUDE_DIRS})
-
+include_directories(${CMAKE_SOURCE_DIR}/../lart_common)
 # link the ZED and CUDA libraries
 link_directories(${ZED_LIBRARY_DIR})
 link_directories(${CUDA_LIBRARY_DIRS})
