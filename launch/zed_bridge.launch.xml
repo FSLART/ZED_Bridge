@@ -6,6 +6,10 @@
     <!-- Publish a static transform to base_link -->
     <node pkg="tf2_ros" exec="static_transform_publisher" name="zed_base_link" args="0.697 0 0 0 0 0 base_link zed_camera_center" />
 
+    <!-- ZED X stereo baseline: 120mm total, 60mm each side of center (Y-left convention) -->
+    <node pkg="tf2_ros" exec="static_transform_publisher" name="zed_center_left" args="0 0.06 0 0 0 0 zed_camera_center zed_camera_left" />
+    <node pkg="tf2_ros" exec="static_transform_publisher" name="zed_center_right" args="0 -0.06 0 0 0 0 zed_camera_center zed_camera_right" />
+
     <!-- Foxglove bridge -->
     <!-- <include file="$(find-pkg-share foxglove_bridge)/launch/foxglove_bridge_launch.xml" /> -->
 

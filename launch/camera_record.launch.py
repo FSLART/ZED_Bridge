@@ -64,12 +64,26 @@ def generate_launch_description():
 
     # 4. Nó de Transformada Estática (que o seu superior adicionou)
     tf_node = Node(
-        package="tf2_ros", 
-        executable="static_transform_publisher", 
+        package="tf2_ros",
+        executable="static_transform_publisher",
         arguments=["0.697", "0", "0.0", "0", "0", "0", "base_footprint", "zed_camera_center"]
+    )
+
+    # ZED X stereo baseline: 120mm total, 60mm each side of center (Y-left convention)
+    tf_left_node = Node(
+        package="tf2_ros",
+        executable="static_transform_publisher",
+        arguments=["0", "0.06", "0", "0", "0", "0", "zed_camera_center", "zed_camera_left"]
+    )
+    tf_right_node = Node(
+        package="tf2_ros",
+        executable="static_transform_publisher",
+        arguments=["0", "-0.06", "0", "0", "0", "0", "zed_camera_center", "zed_camera_right"]
     )
 
     return LaunchDescription([
         container,
-        tf_node
+        tf_node,
+        tf_left_node,
+        tf_right_node
     ])
