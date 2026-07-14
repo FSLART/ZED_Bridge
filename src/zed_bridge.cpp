@@ -381,11 +381,11 @@ void ZedBridge::publishImages()
 
         // publish the images using move semantics
         this->left_image_pub.publish(std::make_shared<sensor_msgs::msg::Image>(std::move(left_image_msg)));
-        this->depth_image_pub.publish(std::make_shared<sensor_msgs::msg::Image>(std::move(depth_image_msg)));
+        // this->depth_image_pub.publish(std::make_shared<sensor_msgs::msg::Image>(std::move(depth_image_msg)));
 
         // publish the camera info using cached templates
         left_info_pub->publish(left_camera_info_template);
-        depth_info_pub->publish(depth_camera_info_template);
+        // depth_info_pub->publish(depth_camera_info_template);
 
         this->frame_counter++;
         this->last_image_time = std::chrono::steady_clock::now();
