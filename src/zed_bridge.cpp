@@ -7,7 +7,7 @@ ZedBridge::ZedBridge(const rclcpp::NodeOptions &options) : Node("zed_bridge", op
     // set configuration parameters
     InitParameters init_params;
     init_params.sdk_verbose = 1;
-    init_params.camera_resolution = RESOLUTION::HD2K;
+    init_params.camera_resolution = RESOLUTION::HD1080;
     init_params.depth_minimum_distance = 0.5f;
     init_params.depth_maximum_distance = 20.0;
     init_params.camera_fps = 15;
