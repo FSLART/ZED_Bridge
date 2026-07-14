@@ -1,0 +1,54 @@
+recorder:
+  ros__parameters:
+    topics:
+      # --- Tópicos da ZED (Zero-Copy se estiverem no contentor) ---
+      - /zed/left/camera_info
+      - /zed/left/image_raw/compressed
+      - /zed/image_annotations
+      
+      # --- Tópicos Externos (Via Rede) ---
+      - /mapping/cones
+      - /mapping/cones_markers
+      - /slam/stats                 
+      - /slam/pose                  
+      - /slam/map/markers           
+      - /slam/map                   
+      - /path                     
+      - /path/markers               
+      - /control/feedback          
+      - /control/torque_target      
+      - /control/rpm_target       
+      - /control/target/marker     
+      - /mission                   
+      - /mission/acu               
+      - /state
+      - /state/acu
+      - /state/nodes       
+      - /imu/angular_velocity
+      - /imu/acceleration
+      - /imu/gnss_pose
+      - /gnss_pose
+      - /jetson
+      - /dv/slam_stats
+      - /dv/dynamics1
+      - /dv/dynamics2
+      - /cubemars/position_loop
+      - /cubemars/feedback
+      - /vcu/torque_target
+      - /vcu/rpm_target
+      - /status
+      - /res
+      - /vcu/hv
+      - /vcu/ign_r2d
+      - /vcu/rpm
+      - /aquisition/aqt1
+      - /aquisition/aqt2
+      - /aquisition/aqt3
+      - /aquisition/aqt4
+      - /aquisition/aqt7
+      - /tf
+      - /tf_static
+
+    storage_id: "mcap"
+    serialization_format: "cdr"
+    start_recording_immediately: false 

@@ -18,8 +18,11 @@
   <depend>tf2</depend>
   <depend>tf2_ros</depend>
   <depend>image_transport</depend>
+  <depend>rclcpp_components</depend>
+  <depend>foxglove_msgs</depend>
 
   <export>
     <build_type>ament_cmake</build_type>
+    <rclcpp_components plugin="${prefix}/share/zed_bridge/zed_bridge_plugins.xml"/>
   </export>
 </package>
