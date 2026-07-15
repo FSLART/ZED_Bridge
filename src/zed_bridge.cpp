@@ -26,7 +26,7 @@ ZedBridge::ZedBridge(const rclcpp::NodeOptions &options) : Node("zed_bridge", op
     obj_param.enable_tracking = false;
     obj_param.enable_segmentation = false;
     obj_param.detection_model = OBJECT_DETECTION_MODEL::CUSTOM_YOLOLIKE_BOX_OBJECTS;
-    obj_param.custom_onnx_file = "/home/lart-fenix/Documents/repos/ros2_ws/src/mapper_speedrun/model/yolo_v8_n.onnx";
+    obj_param.custom_onnx_file = "/home/lart-fenix/Documents/repos/ros2_ws/src/models/yolo_v8_n.onnx";
     obj_param.allow_reduced_precision_inference = true; 
 
     this->obj_runtime_param.detection_confidence_threshold = 85;
